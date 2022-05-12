@@ -1,0 +1,19 @@
+{
+	"configurations": [
+		{
+			"name": "N64",
+			"includePath": [
+				"${default}",
+				"example/libdragon/include",
+				"lib/sdl"
+			],
+			"defines": [],
+			"compilerPath": "/usr/bin/gcc",
+			"cStandard": "gnu99",
+			"cppStandard": "gnu++14",
+			"intelliSenseMode": "linux-gcc-x64",
+			"configurationProvider": "ms-vscode.makefile-tools"
+		}
+	],
+	"version": 4
+}
