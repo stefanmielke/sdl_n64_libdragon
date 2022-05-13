@@ -1,0 +1,73 @@
+#include "SDL_pixels.h"
+
+#include <libdragon.h>
+
+SDL_PixelFormat *SDL_AllocFormat(Uint32 pixel_format) {
+	SDL_PixelFormat *format;
+	format = malloc(sizeof(*format));
+
+	format->format = pixel_format;
+	format->BitsPerPixel = pixel_format == SDL_PIXELFORMAT_RGB888 ? 32 : 16;
+	format->BytesPerPixel = pixel_format == SDL_PIXELFORMAT_RGB888 ? 8 : 4;
+
+	return format;
+}
+
+void SDL_FreeFormat(SDL_PixelFormat *format) {
+	if (format)
+		free(format);
+}
+
+Uint32 SDL_MapRGB(const SDL_PixelFormat *format, Uint8 r, Uint8 g, Uint8 b) {
+	return graphics_make_color(r, g, b, 255);
+}
+
+const char *SDL_GetPixelFormatName(Uint32 format) {
+	switch (format) {
+#define CASE(X)                                                                                    \
+	case X:                                                                                        \
+		return #X;
+
+		CASE(SDL_PIXELFORMAT_INDEX1LSB)
+		CASE(SDL_PIXELFORMAT_INDEX1MSB)
+		CASE(SDL_PIXELFORMAT_INDEX4LSB)
+		CASE(SDL_PIXELFORMAT_INDEX4MSB)
+		CASE(SDL_PIXELFORMAT_INDEX8)
+		CASE(SDL_PIXELFORMAT_RGB332)
+		CASE(SDL_PIXELFORMAT_RGB444)
+		CASE(SDL_PIXELFORMAT_BGR444)
+		CASE(SDL_PIXELFORMAT_RGB555)
+		CASE(SDL_PIXELFORMAT_BGR555)
+		CASE(SDL_PIXELFORMAT_ARGB4444)
+		CASE(SDL_PIXELFORMAT_RGBA4444)
+		CASE(SDL_PIXELFORMAT_ABGR4444)
+		CASE(SDL_PIXELFORMAT_BGRA4444)
+		CASE(SDL_PIXELFORMAT_ARGB1555)
+		CASE(SDL_PIXELFORMAT_RGBA5551)
+		CASE(SDL_PIXELFORMAT_ABGR1555)
+		CASE(SDL_PIXELFORMAT_BGRA5551)
+		CASE(SDL_PIXELFORMAT_RGB565)
+		CASE(SDL_PIXELFORMAT_BGR565)
+		CASE(SDL_PIXELFORMAT_RGB24)
+		CASE(SDL_PIXELFORMAT_BGR24)
+		CASE(SDL_PIXELFORMAT_RGB888)
+		CASE(SDL_PIXELFORMAT_RGBX8888)
+		CASE(SDL_PIXELFORMAT_BGR888)
+		CASE(SDL_PIXELFORMAT_BGRX8888)
+		CASE(SDL_PIXELFORMAT_ARGB8888)
+		CASE(SDL_PIXELFORMAT_RGBA8888)
+		CASE(SDL_PIXELFORMAT_ABGR8888)
+		CASE(SDL_PIXELFORMAT_BGRA8888)
+		CASE(SDL_PIXELFORMAT_ARGB2101010)
+		CASE(SDL_PIXELFORMAT_YV12)
+		CASE(SDL_PIXELFORMAT_IYUV)
+		CASE(SDL_PIXELFORMAT_YUY2)
+		CASE(SDL_PIXELFORMAT_UYVY)
+		CASE(SDL_PIXELFORMAT_YVYU)
+		CASE(SDL_PIXELFORMAT_NV12)
+		CASE(SDL_PIXELFORMAT_NV21)
+#undef CASE
+		default:
+			return "SDL_PIXELFORMAT_UNKNOWN";
+	}
+}
