@@ -86,3 +86,6 @@ void SDL_GetWindowSize(SDL_Window *window, int *w, int *h) {
 	*w = window->w;
 	*h = window->h;
 }
+
+void SDL_SetWindowTitle(SDL_Window *window, const char *title) {
+}

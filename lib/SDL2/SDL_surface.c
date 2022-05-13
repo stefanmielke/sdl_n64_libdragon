@@ -17,6 +17,10 @@ void SDL_FreeSurface(SDL_Surface *surface) {
 	free(surface);
 }
 
+int SDL_SaveBMP_RW(SDL_Surface *surface, SDL_RWops *dst, int freedst) {
+	return 0;
+}
+
 int SDL_FillRect(SDL_Surface *dst, const SDL_Rect *rect, Uint32 color) {
 	SDL_Rect r;
 	if (rect) {
@@ -35,4 +39,8 @@ int SDL_FillRect(SDL_Surface *dst, const SDL_Rect *rect, Uint32 color) {
 	}
 
 	return 0;
+}
+
+int SDL_UpperBlit(SDL_Surface *src, const SDL_Rect *srcrect, SDL_Surface *dst, SDL_Rect *dstrect) {
+	
 }
