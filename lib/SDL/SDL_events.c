@@ -95,7 +95,6 @@ static void gen_input_events() {
 
 // We ignore "RegisterEvents" here and return everything
 int SDL_PollEvent(SDL_Event *event) {
-	return 0;
 	// will generate necessary events (eg.: input) once per frame
 	if (gen_event_flag) {
 		gen_event_flag = !gen_event_flag;
