@@ -190,8 +190,6 @@ SDL_InitSubSystem(Uint32 flags)
     SDL_TicksInit();
 #endif
 
-    fprintf(stderr, "init 1\n");
-    
     /* Initialize the event subsystem */
     if ((flags & SDL_INIT_EVENTS)) {
 #if !SDL_EVENTS_DISABLED
@@ -207,8 +205,6 @@ SDL_InitSubSystem(Uint32 flags)
         goto quit_and_error;
 #endif
     }
-
-    fprintf(stderr, "init 2\n");
 
     /* Initialize the timer subsystem */
     if ((flags & SDL_INIT_TIMER)){
@@ -226,8 +222,6 @@ SDL_InitSubSystem(Uint32 flags)
 #endif
     }
 
-    fprintf(stderr, "init 3\n");
-
     /* Initialize the video subsystem */
     if ((flags & SDL_INIT_VIDEO)){
 #if !SDL_VIDEO_DISABLED
@@ -243,8 +237,6 @@ SDL_InitSubSystem(Uint32 flags)
         goto quit_and_error;
 #endif
     }
-
-    fprintf(stderr, "init 4\n");
 
     /* Initialize the audio subsystem */
     if ((flags & SDL_INIT_AUDIO)){
@@ -262,8 +254,6 @@ SDL_InitSubSystem(Uint32 flags)
 #endif
     }
 
-    fprintf(stderr, "init 5\n");
-
     /* Initialize the joystick subsystem */
     if ((flags & SDL_INIT_JOYSTICK)){
 #if !SDL_JOYSTICK_DISABLED
@@ -280,8 +270,6 @@ SDL_InitSubSystem(Uint32 flags)
 #endif
     }
 
-    fprintf(stderr, "init 6\n");
-
     if ((flags & SDL_INIT_GAMECONTROLLER)){
 #if !SDL_JOYSTICK_DISABLED
         if (SDL_PrivateShouldInitSubsystem(SDL_INIT_GAMECONTROLLER)) {
@@ -296,8 +284,6 @@ SDL_InitSubSystem(Uint32 flags)
         goto quit_and_error;
 #endif
     }
-
-    fprintf(stderr, "init 7\n");
 
     /* Initialize the haptic subsystem */
     if ((flags & SDL_INIT_HAPTIC)){
@@ -315,8 +301,6 @@ SDL_InitSubSystem(Uint32 flags)
 #endif
     }
 
-    fprintf(stderr, "init 8\n");
-
     /* Initialize the sensor subsystem */
     if ((flags & SDL_INIT_SENSOR)){
 #if !SDL_SENSOR_DISABLED
@@ -332,8 +316,6 @@ SDL_InitSubSystem(Uint32 flags)
         goto quit_and_error;
 #endif
     }
-
-    fprintf(stderr, "init 9\n");
 
     return (0);
 

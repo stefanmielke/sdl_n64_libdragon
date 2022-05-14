@@ -126,8 +126,6 @@ VideoBootStrap N64_bootstrap = {
 int
 N64_VideoInit(_THIS)
 {
-    fprintf(stderr, "N64_VideoInit\n");
-
     SDL_VideoDisplay display;
     SDL_DisplayMode current_mode;
 
@@ -138,7 +136,7 @@ N64_VideoInit(_THIS)
 
     current_mode.refresh_rate = 60;
     /* 16 bpp for default */
-    current_mode.format = SDL_PIXELFORMAT_RGBA5551;
+    current_mode.format = SDL_PIXELFORMAT_BGRA5551;
     current_mode.driverdata = NULL;
 
     SDL_zero(display);
@@ -149,12 +147,15 @@ N64_VideoInit(_THIS)
     SDL_AddDisplayMode(&display, &current_mode);
 
     /* 32 bpp secondary mode */
-    current_mode.format = SDL_PIXELFORMAT_RGBA8888;
+    current_mode.format = SDL_PIXELFORMAT_ABGR8888;
     display.desktop_mode = current_mode;
     display.current_mode = current_mode;
     SDL_AddDisplayMode(&display, &current_mode);
 
     SDL_AddVideoDisplay(&display, SDL_FALSE);
+
+    display_init(RESOLUTION_320x240, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
+	rdp_init();
 
     return 1;
 }
@@ -180,8 +181,6 @@ N64_SetDisplayMode(_THIS, SDL_VideoDisplay * display, SDL_DisplayMode * mode)
 int
 N64_CreateWindow(_THIS, SDL_Window * window)
 {
-    fprintf(stderr, "N64_CreateWindow\n");
-
     SDL_WindowData *wdata;
 
     /* Allocate window internal data */

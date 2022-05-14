@@ -18,66 +18,31 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
-#include "../../SDL_internal.h"
 
-#ifdef SDL_TIMER_N64
+#ifndef SDL_n64gl_c_h_
+#define SDL_n64gl_c_h_
+
+#include "SDL_n64video.h"
 
 #include <libdragon.h>
 
-static SDL_bool ticks_started = SDL_FALSE;
+typedef struct SDL_GLDriverData {
+   display_context_t disp;
+}SDL_GLDriverData;
 
-void
-SDL_TicksInit(void)
-{
-    if (ticks_started) {
-        return;
-    }
-    ticks_started = SDL_TRUE;
-    
-    dfs_init(0xB0201000);
+extern void * N64_GL_GetProcAddress(_THIS, const char *proc);
+extern int N64_GL_MakeCurrent(_THIS,SDL_Window * window, SDL_GLContext context);
+extern void N64_GL_SwapBuffers(_THIS);
 
-    debug_init_isviewer();
-    timer_init();
-}
+extern int N64_GL_SwapWindow(_THIS, SDL_Window * window);
+extern SDL_GLContext N64_GL_CreateContext(_THIS, SDL_Window * window);
 
-void
-SDL_TicksQuit(void)
-{
-    fprintf(stderr, "SDL_TicksQuit\n");
-    ticks_started = SDL_FALSE;
+extern int N64_GL_LoadLibrary(_THIS, const char *path);
+extern void N64_GL_UnloadLibrary(_THIS);
+extern int N64_GL_SetSwapInterval(_THIS, int interval);
+extern int N64_GL_GetSwapInterval(_THIS);
 
-    timer_close();
-}
 
-Uint64
-SDL_GetTicks64(void)
-{
-    if (!ticks_started) {
-        SDL_TicksInit();
-    }
+#endif /* SDL_n64gl_c_h_ */
 
-    return get_ticks();
-}
-
-Uint64
-SDL_GetPerformanceCounter(void)
-{
-    return SDL_GetTicks64();
-}
-
-Uint64
-SDL_GetPerformanceFrequency(void)
-{
-    return 1000;
-}
-
-void SDL_Delay(Uint32 ms)
-{
-    // do not delay?
-    // the N64 operates at 60hz or 50hz varying on the region, no need to lock the thread
-}
-
-#endif /* SDL_TIMER_N64 */
-
-/* vim: ts=4 sw=4
- */
+/* vi: set ts=4 sw=4 expandtab: */
