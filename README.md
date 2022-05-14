@@ -12,7 +12,7 @@ Copy all lib/SDL or lib/SDL2 into your project.
 
 Set to compile all `.c` files inside that folder.
 
-Include the folder to use `<SDL/SDL.h>` or `<SDL2/SDL.h>` in your project.
+Include the folder to use `<SDL/SDL.h>` or `<SDL.h>` in your project.
 
 Sample Makefile:
 ```Makefile
