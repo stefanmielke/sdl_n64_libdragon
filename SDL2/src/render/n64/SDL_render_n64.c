@@ -40,7 +40,7 @@
 #define N64_FRAME_BUFFER_WIDTH  N64_SCREEN_WIDTH
 #define N64_FRAME_BUFFER_SIZE   (N64_FRAME_BUFFER_WIDTH*N64_SCREEN_HEIGHT)
 
-static unsigned int __attribute__((aligned(16))) DisplayList[262144];
+// static unsigned int __attribute__((aligned(16))) DisplayList[262144];
 
 
 #define COL5650(r,g,b,a)    ((r>>3) | ((g>>2)<<5) | ((b>>3)<<11))
@@ -80,20 +80,10 @@ typedef struct
 
 typedef struct
 {
-    void*              frontbuffer;                         /**< main screen buffer */
-    void*              backbuffer;                          /**< buffer presented to display */
-    SDL_Texture*       boundTarget;                         /**< currently bound rendertarget */
-    SDL_bool           initialized;                         /**< is driver initialized */
-    SDL_bool           displayListAvail;                    /**< is the display list already initialized for this frame */
-    unsigned int       psm;                                 /**< format of the display buffers */
-    unsigned int       bpp;                                 /**< bits per pixel of the main display */
-
-    SDL_bool           vsync;                               /**< wether we do vsync */
-    N64_BlendState     blendState;                          /**< current blend mode */
-    N64_TextureData*   most_recent_target;                  /**< start of render target LRU double linked list */
-    N64_TextureData*   least_recent_target;                 /**< end of the LRU list */
-
-    SDL_bool           vblank_not_reached;                  /**< wether vblank wasn't reached */
+    /** currently bound rendertarget */
+    SDL_Texture *boundTarget;
+    /* libdragon's render context */
+    display_context_t displayContext;
 } N64_RenderData;
 
 
@@ -128,45 +118,12 @@ typedef struct
 #define radToDeg(x) ((x)*180.f/PI)
 #define degToRad(x) ((x)*PI/180.f)
 
-static float
-MathAbs(float x)
-{
-    float result;
-
-    __asm__ volatile (
-        "mtv      %1, S000\n"
-        "vabs.s   S000, S000\n"
-        "mfv      %0, S000\n"
-    : "=r"(result) : "r"(x));
-
-    return result;
-}
-
-static void
-MathSincos(float r, float *s, float *c)
-{
-    __asm__ volatile (
-        "mtv      %2, S002\n"
-        "vcst.s   S003, VFPU_2_PI\n"
-        "vmul.s   S002, S002, S003\n"
-        "vrot.p   C000, S002, [s, c]\n"
-        "mfv      %0, S000\n"
-        "mfv      %1, S001\n"
-    : "=r"(*s), "=r"(*c): "r"(r));
-}
-
 static void
 Swap(float *a, float *b)
 {
     float n=*a;
     *a = *b;
     *b = n;
-}
-
-static inline int
-InVram(void* data)
-{
-    return data < (void*)0x04200000;
 }
 
 /* Return next power of 2 */
@@ -183,85 +140,18 @@ TextureNextPow2(unsigned int w)
     return n;
 }
 
-static void n64_on_vblank(u32 sub, N64_RenderData *data)
-{
-   if (data)
-      data->vblank_not_reached = SDL_FALSE;
-}
-
-
 static int
 PixelFormatToN64FMT(Uint32 format)
 {
     switch (format) {
-    case SDL_PIXELFORMAT_BGR565:
-        return GU_PSM_5650;
-    case SDL_PIXELFORMAT_ABGR1555:
-        return GU_PSM_5551;
-    case SDL_PIXELFORMAT_ABGR4444:
-        return GU_PSM_4444;
     case SDL_PIXELFORMAT_ABGR8888:
-        return GU_PSM_8888;
+        return DEPTH_32_BPP;
     default:
-        return GU_PSM_8888;
+        return DEPTH_16_BPP;
     }
 }
 
-///SECTION render target LRU management
-static void
-LRUTargetRelink(N64_TextureData* n64_texture) {
-    if(n64_texture->prevhotw) {
-        n64_texture->prevhotw->nexthotw = n64_texture->nexthotw;
-    }
-    if(n64_texture->nexthotw) {
-        n64_texture->nexthotw->prevhotw = n64_texture->prevhotw;
-    }
-}
-
-static void
-LRUTargetPushFront(N64_RenderData* data, N64_TextureData* n64_texture) {
-    n64_texture->nexthotw = data->most_recent_target;
-    if(data->most_recent_target) {
-        data->most_recent_target->prevhotw = n64_texture;
-    }
-    data->most_recent_target = n64_texture;
-    if(!data->least_recent_target) {
-        data->least_recent_target = n64_texture;
-    }
-}
-
-static void
-LRUTargetRemove(N64_RenderData* data, N64_TextureData* n64_texture) {
-    LRUTargetRelink(n64_texture);
-    if(data->most_recent_target == n64_texture) {
-        data->most_recent_target = n64_texture->nexthotw;
-    }
-    if(data->least_recent_target == n64_texture) {
-        data->least_recent_target = n64_texture->prevhotw;
-    }
-    n64_texture->prevhotw = NULL;
-    n64_texture->nexthotw = NULL;
-}
-
-static void
-LRUTargetBringFront(N64_RenderData* data, N64_TextureData* n64_texture) {
-    if(data->most_recent_target == n64_texture) {
-        return; //nothing to do
-    }
-    LRUTargetRemove(data, n64_texture);
-    LRUTargetPushFront(data, n64_texture);
-}
-
-static void
-TextureStorageFree(void* storage) {
-    if(InVram(storage)) {
-        vfree(storage);
-    } else {
-        SDL_free(storage);
-    }
-}
-
-static int
+ int
 TextureSwizzle(N64_TextureData *n64_texture, void* dst)
 {
     int bytewidth, height;
@@ -310,15 +200,15 @@ TextureSwizzle(N64_TextureData *n64_texture, void* dst)
             blockaddress += rowblocksadd;
     }
 
-    TextureStorageFree(n64_texture->data);
+    // TextureStorageFree(n64_texture->data);
     n64_texture->data = data;
     n64_texture->swizzled = SDL_TRUE;
 
-    sceKernelDcacheWritebackRange(n64_texture->data, n64_texture->size);
+    // sceKernelDcacheWritebackRange(n64_texture->data, n64_texture->size);
     return 1;
 }
 
-static int
+ int
 TextureUnswizzle(N64_TextureData *n64_texture, void* dst)
 {
     int bytewidth, height;
@@ -380,119 +270,33 @@ TextureUnswizzle(N64_TextureData *n64_texture, void* dst)
         ydst += dstrow;
     }
 
-    TextureStorageFree(n64_texture->data);
+    // TextureStorageFree(n64_texture->data);
 
     n64_texture->data = data;
 
     n64_texture->swizzled = SDL_FALSE;
 
-    sceKernelDcacheWritebackRange(n64_texture->data, n64_texture->size);
+    // sceKernelDcacheWritebackRange(n64_texture->data, n64_texture->size);
     return 1;
 }
 
-static int
-TextureSpillToSram(N64_RenderData* data, N64_TextureData* n64_texture)
+ int
+TextureBindAsTarget(N64_RenderData* data, N64_TextureData* n64_texture)
 {
-    // Assumes the texture is in VRAM
-    if(n64_texture->swizzled) {
-        //Texture was swizzled in vram, just copy to system memory
-        void* data = SDL_malloc(n64_texture->size);
-        if(!data) {
-            return SDL_OutOfMemory();
-        }
-
-        SDL_memcpy(data, n64_texture->data, n64_texture->size);
-        vfree(n64_texture->data);
-        n64_texture->data = data;
-        return 0;
-    } else {
-        return TextureSwizzle(n64_texture, NULL); //Will realloc in sysram
-    }
-}
-
-static int
-TexturePromoteToVram(N64_RenderData* data, N64_TextureData* n64_texture, SDL_bool target)
-{
-    // Assumes texture in sram and a large enough continuous block in vram
-    void* tdata = valloc(n64_texture->size);
-    if(n64_texture->swizzled && target) {
-        return TextureUnswizzle(n64_texture, tdata);
-    } else {
-        SDL_memcpy(tdata, n64_texture->data, n64_texture->size);
-        SDL_free(n64_texture->data);
-        n64_texture->data = tdata;
-        return 0;
-    }
-}
-
-static int
-TextureSpillLRU(N64_RenderData* data, size_t wanted) {
-    N64_TextureData* lru = data->least_recent_target;
-    if(lru) {
-        if(TextureSpillToSram(data, lru) < 0) {
-            return -1;
-        }
-        LRUTargetRemove(data, lru);
-    } else {
-        SDL_SetError("Could not spill more VRAM to system memory. VRAM : %dKB,(%dKB), wanted %dKB", vmemavail()/1024, vlargestblock()/1024, wanted/1024);
-        return -1; //Asked to spill but there nothing to spill
-    }
-    return 0;
-}
-
-static int
-TextureSpillTargetsForSpace(N64_RenderData* data, size_t size)
-{
-    while(vlargestblock() < size) {
-        if(TextureSpillLRU(data, size) < 0) {
-            return -1;
-        }
-    }
-    return 0;
-}
-
-static int
-TextureBindAsTarget(N64_RenderData* data, N64_TextureData* n64_texture) {
-    unsigned int dstFormat;
-
-    if(!InVram(n64_texture->data)) {
-        // Bring back the texture in vram
-        if(TextureSpillTargetsForSpace(data, n64_texture->size) < 0) {
-            return -1;
-        }
-        if(TexturePromoteToVram(data, n64_texture, SDL_TRUE) < 0) {
-            return -1;
-        }
-    }
-    LRUTargetBringFront(data, n64_texture);
-    sceGuDrawBufferList(n64_texture->format, vrelptr(n64_texture->data), n64_texture->textureWidth);
-
-    // Stencil alpha dst hack
-    dstFormat = n64_texture->format;
-    if(dstFormat == GU_PSM_5551) {
-        sceGuEnable(GU_STENCIL_TEST);
-        sceGuStencilOp(GU_REPLACE, GU_REPLACE, GU_REPLACE);
-        sceGuStencilFunc(GU_GEQUAL, 0xff, 0xff);
-        sceGuEnable(GU_ALPHA_TEST);
-        sceGuAlphaFunc(GU_GREATER, 0x00, 0xff);
-    } else {
-        sceGuDisable(GU_STENCIL_TEST);
-        sceGuDisable(GU_ALPHA_TEST);
-    }
     return 0;
 }
 
 static void
-N64_WindowEvent(SDL_Renderer * renderer, const SDL_WindowEvent *event)
+N64_WindowEvent(SDL_Renderer *renderer, const SDL_WindowEvent *event)
 {
 }
 
 
 static int
-N64_CreateTexture(SDL_Renderer * renderer, SDL_Texture * texture)
+N64_CreateTexture(SDL_Renderer *renderer, SDL_Texture *texture)
 {
-    N64_RenderData *data = renderer->driverdata;
-    N64_TextureData* n64_texture = (N64_TextureData*) SDL_calloc(1, sizeof(*n64_texture));
+    // N64_RenderData *data = renderer->driverdata;
+    N64_TextureData *n64_texture = (N64_TextureData *)SDL_calloc(1, sizeof(*n64_texture));
 
     if(!n64_texture)
         return SDL_OutOfMemory();
@@ -506,33 +310,19 @@ N64_CreateTexture(SDL_Renderer * renderer, SDL_Texture * texture)
 
     switch(n64_texture->format)
     {
-        case GU_PSM_5650:
-        case GU_PSM_5551:
-        case GU_PSM_4444:
+        case DEPTH_16_BPP:
             n64_texture->bits = 16;
             break;
-
-        case GU_PSM_8888:
+        case DEPTH_32_BPP:
             n64_texture->bits = 32;
             break;
-
         default:
             return -1;
     }
 
     n64_texture->pitch = n64_texture->textureWidth * SDL_BYTESPERPIXEL(texture->format);
     n64_texture->size = n64_texture->textureHeight*n64_texture->pitch;
-    if(texture->access & SDL_TEXTUREACCESS_TARGET) {
-        if(TextureSpillTargetsForSpace(renderer->driverdata, n64_texture->size) < 0){
-            return -1;
-        }
-        n64_texture->data = valloc(n64_texture->size);
-        if(n64_texture->data) {
-            LRUTargetPushFront(data, n64_texture);
-        }
-    } else {
-        n64_texture->data = SDL_calloc(1, n64_texture->size);
-    }
+    n64_texture->data = SDL_calloc(1, n64_texture->size);
 
     if(!n64_texture->data)
     {
@@ -544,30 +334,31 @@ N64_CreateTexture(SDL_Renderer * renderer, SDL_Texture * texture)
     return 0;
 }
 
-static int
+ int
 TextureShouldSwizzle(N64_TextureData* n64_texture, SDL_Texture *texture)
 {
-    return !((texture->access == SDL_TEXTUREACCESS_TARGET) && InVram(n64_texture->data))
-             && (texture->w >= 16 || texture->h >= 16);
+    return -1;
+    // return !((texture->access == SDL_TEXTUREACCESS_TARGET) && InVram(n64_texture->data))
+    //          && (texture->w >= 16 || texture->h >= 16);
 }
 
-static void
+ void
 TextureActivate(SDL_Texture * texture)
 {
-    N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata;
-    int scaleMode = (texture->scaleMode == SDL_ScaleModeNearest) ? GU_NEAREST : GU_LINEAR;
+    // N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata;
+    // int scaleMode = (texture->scaleMode == SDL_ScaleModeNearest) ? GU_NEAREST : GU_LINEAR;
 
-    /* Swizzling is useless with small textures. */
-    if (TextureShouldSwizzle(n64_texture, texture))
-    {
-        TextureSwizzle(n64_texture, NULL);
-    }
+    // /* Swizzling is useless with small textures. */
+    // if (TextureShouldSwizzle(n64_texture, texture))
+    // {
+    //     TextureSwizzle(n64_texture, NULL);
+    // }
 
-    sceGuTexWrap(GU_REPEAT, GU_REPEAT);
-    sceGuTexMode(n64_texture->format, 0, 0, n64_texture->swizzled);
-    sceGuTexFilter(scaleMode, scaleMode); /* GU_NEAREST good for tile-map */
-                                          /* GU_LINEAR good for scaling */
-    sceGuTexImage(0, n64_texture->textureWidth, n64_texture->textureHeight, n64_texture->textureWidth, n64_texture->data);
+    // sceGuTexWrap(GU_REPEAT, GU_REPEAT);
+    // sceGuTexMode(n64_texture->format, 0, 0, n64_texture->swizzled);
+    // sceGuTexFilter(scaleMode, scaleMode); /* GU_NEAREST good for tile-map */
+    //                                       /* GU_LINEAR good for scaling */
+    // sceGuTexImage(0, n64_texture->textureWidth, n64_texture->textureHeight, n64_texture->textureWidth, n64_texture->data);
 }
 
 static int
@@ -579,24 +370,24 @@ N64_UpdateTexture(SDL_Renderer * renderer, SDL_Texture * texture,
                    const SDL_Rect * rect, const void *pixels, int pitch)
 {
 /*  N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata; */
-    const Uint8 *src;
-    Uint8 *dst;
-    int row, length,dpitch;
-    src = pixels;
+    // const Uint8 *src;
+    // Uint8 *dst;
+    // int row, length,dpitch;
+    // src = pixels;
 
-    N64_LockTexture(renderer, texture,rect,(void **)&dst, &dpitch);
-    length = rect->w * SDL_BYTESPERPIXEL(texture->format);
-    if (length == pitch && length == dpitch) {
-        SDL_memcpy(dst, src, length*rect->h);
-    } else {
-        for (row = 0; row < rect->h; ++row) {
-            SDL_memcpy(dst, src, length);
-            src += pitch;
-            dst += dpitch;
-        }
-    }
+    // N64_LockTexture(renderer, texture,rect,(void **)&dst, &dpitch);
+    // length = rect->w * SDL_BYTESPERPIXEL(texture->format);
+    // if (length == pitch && length == dpitch) {
+    //     SDL_memcpy(dst, src, length*rect->h);
+    // } else {
+    //     for (row = 0; row < rect->h; ++row) {
+    //         SDL_memcpy(dst, src, length);
+    //         src += pitch;
+    //         dst += dpitch;
+    //     }
+    // }
 
-    sceKernelDcacheWritebackAll();
+    // sceKernelDcacheWritebackAll();
     return 0;
 }
 
@@ -796,7 +587,7 @@ N64_QueueCopy(SDL_Renderer * renderer, SDL_RenderCommand *cmd, SDL_Texture * tex
     const float u1 = srcrect->x + srcrect->w;
     const float v1 = srcrect->y + srcrect->h;
 
-    if((MathAbs(u1) - MathAbs(u0)) < 64.0f)
+    if((fabs(u1) - fabs(u0)) < 64.0f)
     {
         verts = (VertTV *) SDL_AllocateRenderVertices(renderer, 2 * sizeof (VertTV), 4, &cmd->data.draw.first);
         if (!verts) {
@@ -882,7 +673,7 @@ N64_QueueCopyEx(SDL_Renderer * renderer, SDL_RenderCommand *cmd, SDL_Texture * t
     const float y = dstrect->y + centery;
     const float width = dstrect->w - centerx;
     const float height = dstrect->h - centery;
-    float s, c;
+    double s, c;
     float cw, sw, ch, sh;
 
     float u0 = srcrect->x;
@@ -890,15 +681,13 @@ N64_QueueCopyEx(SDL_Renderer * renderer, SDL_RenderCommand *cmd, SDL_Texture * t
     float u1 = srcrect->x + srcrect->w;
     float v1 = srcrect->y + srcrect->h;
 
-
-
     if (!verts) {
         return -1;
     }
 
     cmd->data.draw.count = 1;
 
-    MathSincos(degToRad(angle), &s, &c);
+    sincos(degToRad(angle), &s, &c);
 
     cw = c * width;
     sw = s * width;
@@ -944,142 +733,61 @@ N64_QueueCopyEx(SDL_Renderer * renderer, SDL_RenderCommand *cmd, SDL_Texture * t
     return 0;
 }
 
-static void
-ResetBlendState(N64_BlendState* state) {
-    sceGuColor(0xffffffff);
-    state->color = 0xffffffff;
-    state->mode = SDL_BLENDMODE_INVALID;
-    state->texture = NULL;
-    sceGuDisable(GU_TEXTURE_2D);
-    sceGuShadeModel(GU_SMOOTH);
-    state->shadeModel = GU_SMOOTH;
+ void
+ResetBlendState(N64_BlendState* state)
+{
 }
 
 static void
-StartDrawing(SDL_Renderer * renderer)
+StartDrawing(SDL_Renderer *renderer)
 {
-    N64_RenderData *data = (N64_RenderData *) renderer->driverdata;
-
-    // Check if we need to start GU displaylist
-    if(!data->displayListAvail) {
-        sceGuStart(GU_DIRECT, DisplayList);
-        data->displayListAvail = SDL_TRUE;
-        //ResetBlendState(&data->blendState);
-    }
-
-    // Check if we need a draw buffer change
-    if(renderer->target != data->boundTarget) {
-        SDL_Texture* texture = renderer->target;
-        if(texture) {
-            N64_TextureData* n64_texture = (N64_TextureData*) texture->driverdata;
-            // Set target, registering LRU
-            TextureBindAsTarget(data, n64_texture);
-        } else {
-            // Set target back to screen
-            sceGuDrawBufferList(data->psm, vrelptr(data->frontbuffer), N64_FRAME_BUFFER_WIDTH);
-        }
-        data->boundTarget = texture;
-    }
+    N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
+    
+    data->displayContext = 0;
+    while (!(data->displayContext = display_lock()))
+        ;
 }
 
-
-static void
-N64_SetBlendState(N64_RenderData* data, N64_BlendState* state)
+ void
+N64_SetBlendState(N64_RenderData *data, N64_BlendState *state)
 {
-    N64_BlendState* current = &data->blendState;
-
-    if (state->mode != current->mode) {
-        switch (state->mode) {
-        case SDL_BLENDMODE_NONE:
-            sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
-            sceGuDisable(GU_BLEND);
-            break;
-        case SDL_BLENDMODE_BLEND:
-            sceGuTexFunc(GU_TFX_MODULATE, GU_TCC_RGBA);
-            sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE_MINUS_SRC_ALPHA, 0, 0 );
-            sceGuEnable(GU_BLEND);
-            break;
-        case SDL_BLENDMODE_ADD:
-            sceGuTexFunc(GU_TFX_MODULATE , GU_TCC_RGBA);
-            sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_FIX, 0, 0x00FFFFFF );
-            sceGuEnable(GU_BLEND);
-            break;
-        case SDL_BLENDMODE_MOD:
-            sceGuTexFunc(GU_TFX_MODULATE , GU_TCC_RGBA);
-            sceGuBlendFunc(GU_ADD, GU_FIX, GU_SRC_COLOR, 0, 0);
-            sceGuEnable(GU_BLEND);
-            break;
-        case SDL_BLENDMODE_MUL:
-            sceGuTexFunc(GU_TFX_MODULATE , GU_TCC_RGBA);
-            sceGuBlendFunc(GU_ADD, GU_DST_COLOR, GU_ONE_MINUS_SRC_ALPHA, 0, 0);
-            sceGuEnable(GU_BLEND);
-            break;
-        case SDL_BLENDMODE_INVALID:
-            break;
-        }
-    }
-
-    if(state->color != current->color) {
-        sceGuColor(state->color);
-    }
-
-    if(state->shadeModel != current->shadeModel) {
-        sceGuShadeModel(state->shadeModel);
-    }
-
-    if(state->texture != current->texture) {
-        if(state->texture != NULL) {
-            TextureActivate(state->texture);
-            sceGuEnable(GU_TEXTURE_2D);
-        } else {
-            sceGuDisable(GU_TEXTURE_2D);
-        }
-    }
-
-    *current = *state;
 }
 
 static int
 N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *vertices, size_t vertsize)
 {
     N64_RenderData *data = (N64_RenderData *) renderer->driverdata;
-    Uint8 *gpumem = NULL;
+    // Uint8 *gpumem = NULL;
     StartDrawing(renderer);
 
-    /* note that before the renderer interface change, this would do extrememly small
-       batches with sceGuGetMemory()--a few vertices at a time--and it's not clear that
-       this won't fail if you try to push 100,000 draw calls in a single batch.
-       I don't know what the limits on N64 hardware are. It might be useful to have
-       rendering backends report a reasonable maximum, so the higher level can flush
-       if we appear to be exceeding that. */
-    gpumem = (Uint8 *) sceGuGetMemory(vertsize);
-    if (!gpumem) {
-        return SDL_SetError("Couldn't obtain a %d-byte vertex buffer!", (int) vertsize);
-    }
-    SDL_memcpy(gpumem, vertices, vertsize);
+    // gpumem = (Uint8 *)sceGuGetMemory(vertsize);
+    // if (!gpumem) {
+    //     return SDL_SetError("Couldn't obtain a %d-byte vertex buffer!", (int) vertsize);
+    // }
+    // SDL_memcpy(gpumem, vertices, vertsize);
 
     while (cmd) {
         switch (cmd->command) {
             case SDL_RENDERCMD_SETDRAWCOLOR: {
-                break;  /* !!! FIXME: we could cache drawstate like color */
+                break;
             }
 
             case SDL_RENDERCMD_SETVIEWPORT: {
-                SDL_Rect *viewport = &cmd->data.viewport.rect;
-                sceGuOffset(2048 - (viewport->w >> 1), 2048 - (viewport->h >> 1));
-                sceGuViewport(2048, 2048, viewport->w, viewport->h);
-                sceGuScissor(viewport->x, viewport->y, viewport->w, viewport->h);
+                // SDL_Rect *viewport = &cmd->data.viewport.rect;
+                // sceGuOffset(2048 - (viewport->w >> 1), 2048 - (viewport->h >> 1));
+                // sceGuViewport(2048, 2048, viewport->w, viewport->h);
+                // sceGuScissor(viewport->x, viewport->y, viewport->w, viewport->h);
                 break;
             }
 
             case SDL_RENDERCMD_SETCLIPRECT: {
-                const SDL_Rect *rect = &cmd->data.cliprect.rect;
-                if(cmd->data.cliprect.enabled){
-                    sceGuEnable(GU_SCISSOR_TEST);
-                    sceGuScissor(rect->x, rect->y, rect->w, rect->h);
-                } else {
-                    sceGuDisable(GU_SCISSOR_TEST);
-                }
+                // const SDL_Rect *rect = &cmd->data.cliprect.rect;
+                // if(cmd->data.cliprect.enabled){
+                //     sceGuEnable(GU_SCISSOR_TEST);
+                //     sceGuScissor(rect->x, rect->y, rect->w, rect->h);
+                // } else {
+                //     sceGuDisable(GU_SCISSOR_TEST);
+                // }
                 break;
             }
 
@@ -1088,125 +796,117 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
                 const Uint8 g = cmd->data.color.g;
                 const Uint8 b = cmd->data.color.b;
                 const Uint8 a = cmd->data.color.a;
-                sceGuClearColor(GU_RGBA(r,g,b,a));
-                sceGuClearStencil(a);
-                sceGuClear(GU_COLOR_BUFFER_BIT | GU_STENCIL_BUFFER_BIT);
+
+                uint32_t color = graphics_make_color(r, g, b, a);
+                graphics_fill_screen(data->displayContext, color);
                 break;
             }
 
             case SDL_RENDERCMD_DRAW_POINTS: {
-                const size_t count = cmd->data.draw.count;
-                const VertV *verts = (VertV *) (gpumem + cmd->data.draw.first);
-                const Uint8 r = cmd->data.draw.r;
-                const Uint8 g = cmd->data.draw.g;
-                const Uint8 b = cmd->data.draw.b;
-                const Uint8 a = cmd->data.draw.a;
-                N64_BlendState state = {
-                    .color = GU_RGBA(r,g,b,a),
-                    .texture = NULL,
-                    .mode = cmd->data.draw.blend,
-                    .shadeModel = GU_FLAT
-                };
-                N64_SetBlendState(data, &state);
-                sceGuDrawArray(GU_POINTS, GU_VERTEX_32BITF|GU_TRANSFORM_2D, count, 0, verts);
+                // const Uint8 r = cmd->data.draw.r;
+                // const Uint8 g = cmd->data.draw.g;
+                // const Uint8 b = cmd->data.draw.b;
+                // const Uint8 a = cmd->data.draw.a;
+
+                // uint32_t color = graphics_make_color(r, g, b, a);
+                // graphics_fill_screen(data->displayContext, color);
+
+                // const size_t count = cmd->data.draw.count;
+                // const VertV *verts = (VertV *)(cmd->data.draw.first);
+                // for (size_t i = 0; i < count; ++i) {
+                //     graphics_draw_pixel(data->displayContext, verts[i].x, verts[i].y, color);
+                // }
                 break;
             }
 
             case SDL_RENDERCMD_DRAW_LINES: {
-                const size_t count = cmd->data.draw.count;
-                const VertV *verts = (VertV *) (gpumem + cmd->data.draw.first);
-                const Uint8 r = cmd->data.draw.r;
-                const Uint8 g = cmd->data.draw.g;
-                const Uint8 b = cmd->data.draw.b;
-                const Uint8 a = cmd->data.draw.a;
-                N64_BlendState state = {
-                    .color = GU_RGBA(r,g,b,a),
-                    .texture = NULL,
-                    .mode = cmd->data.draw.blend,
-                    .shadeModel = GU_FLAT
-                };
-                N64_SetBlendState(data, &state);
-                sceGuDrawArray(GU_LINE_STRIP, GU_VERTEX_32BITF|GU_TRANSFORM_2D, count, 0, verts);
+                // const Uint8 r = cmd->data.draw.r;
+                // const Uint8 g = cmd->data.draw.g;
+                // const Uint8 b = cmd->data.draw.b;
+                // const Uint8 a = cmd->data.draw.a;
+
+                // uint32_t color = graphics_make_color(r, g, b, a);
+                // graphics_fill_screen(data->displayContext, color);
+
+                // const size_t count = cmd->data.draw.count;
+                // const VertV *verts = (VertV *)(gpumem + cmd->data.draw.first);
+                // for (size_t i = 0; i < count; i += 2) {
+                //     graphics_draw_line(data->displayContext, verts[i].x,
+                //         verts[i].y, verts[i + 1].x, verts[i + 1].y, color);
+                // }
+
                 break;
             }
 
             case SDL_RENDERCMD_FILL_RECTS: {
-                const size_t count = cmd->data.draw.count;
-                const VertV *verts = (VertV *) (gpumem + cmd->data.draw.first);
-                const Uint8 r = cmd->data.draw.r;
-                const Uint8 g = cmd->data.draw.g;
-                const Uint8 b = cmd->data.draw.b;
-                const Uint8 a = cmd->data.draw.a;
-                N64_BlendState state = {
-                    .color = GU_RGBA(r,g,b,a),
-                    .texture = NULL,
-                    .mode = cmd->data.draw.blend,
-                    .shadeModel = GU_FLAT
-                };
-                N64_SetBlendState(data, &state);
-                sceGuDrawArray(GU_SPRITES, GU_VERTEX_32BITF|GU_TRANSFORM_2D, 2 * count, 0, verts);
-                break;
+                // const size_t count = cmd->data.draw.count;
+                // const VertV *verts = (VertV *) (gpumem + cmd->data.draw.first);
+                // const Uint8 r = cmd->data.draw.r;
+                // const Uint8 g = cmd->data.draw.g;
+                // const Uint8 b = cmd->data.draw.b;
+                // const Uint8 a = cmd->data.draw.a;
+                // break;
             }
 
             case SDL_RENDERCMD_COPY: {
-                const size_t count = cmd->data.draw.count;
-                const VertTV *verts = (VertTV *) (gpumem + cmd->data.draw.first);
-                const Uint8 a = cmd->data.draw.a;
-                const Uint8 r = cmd->data.draw.r;
-                const Uint8 g = cmd->data.draw.g;
-                const Uint8 b = cmd->data.draw.b;
-                N64_BlendState state = {
-                    .color = GU_RGBA(r,g,b,a),
-                    .texture = cmd->data.draw.texture,
-                    .mode = cmd->data.draw.blend,
-                    .shadeModel = GU_SMOOTH
-                };
-                N64_SetBlendState(data, &state);
-                sceGuDrawArray(GU_SPRITES, GU_TEXTURE_32BITF|GU_VERTEX_32BITF|GU_TRANSFORM_2D, 2 * count, 0, verts);
-                break;
+                // const size_t count = cmd->data.draw.count;
+                // const VertTV *verts = (VertTV *) (gpumem + cmd->data.draw.first);
+                // const Uint8 a = cmd->data.draw.a;
+                // const Uint8 r = cmd->data.draw.r;
+                // const Uint8 g = cmd->data.draw.g;
+                // const Uint8 b = cmd->data.draw.b;
+                // N64_BlendState state = {
+                //     .color = GU_RGBA(r,g,b,a),
+                //     .texture = cmd->data.draw.texture,
+                //     .mode = cmd->data.draw.blend,
+                //     .shadeModel = GU_SMOOTH
+                // };
+                // N64_SetBlendState(data, &state);
+                // sceGuDrawArray(GU_SPRITES, GU_TEXTURE_32BITF|GU_VERTEX_32BITF|GU_TRANSFORM_2D, 2 * count, 0, verts);
+                // break;
             }
 
             case SDL_RENDERCMD_COPY_EX: {
-                const VertTV *verts = (VertTV *) (gpumem + cmd->data.draw.first);
-                const Uint8 a = cmd->data.draw.a;
-                const Uint8 r = cmd->data.draw.r;
-                const Uint8 g = cmd->data.draw.g;
-                const Uint8 b = cmd->data.draw.b;
-                N64_BlendState state = {
-                    .color = GU_RGBA(r,g,b,a),
-                    .texture = cmd->data.draw.texture,
-                    .mode = cmd->data.draw.blend,
-                    .shadeModel = GU_SMOOTH
-                };
-                N64_SetBlendState(data, &state);
-                sceGuDrawArray(GU_TRIANGLE_FAN, GU_TEXTURE_32BITF|GU_VERTEX_32BITF|GU_TRANSFORM_2D, 4, 0, verts);
-                break;
+                // const VertTV *verts = (VertTV *) (gpumem + cmd->data.draw.first);
+                // const Uint8 a = cmd->data.draw.a;
+                // const Uint8 r = cmd->data.draw.r;
+                // const Uint8 g = cmd->data.draw.g;
+                // const Uint8 b = cmd->data.draw.b;
+                // N64_BlendState state = {
+                //     .color = GU_RGBA(r,g,b,a),
+                //     .texture = cmd->data.draw.texture,
+                //     .mode = cmd->data.draw.blend,
+                //     .shadeModel = GU_SMOOTH
+                // };
+                // N64_SetBlendState(data, &state);
+                // sceGuDrawArray(GU_TRIANGLE_FAN, GU_TEXTURE_32BITF|GU_VERTEX_32BITF|GU_TRANSFORM_2D, 4, 0, verts);
+                // break;
             }
 
             case SDL_RENDERCMD_GEOMETRY: {
-                const size_t count = cmd->data.draw.count;
-                if (cmd->data.draw.texture == NULL) {
-                    const VertCV *verts = (VertCV *) (gpumem + cmd->data.draw.first);
-                    sceGuDisable(GU_TEXTURE_2D);
-                    /* In GU_SMOOTH mode */
-                    sceGuDrawArray(GU_TRIANGLES, GU_COLOR_8888|GU_VERTEX_32BITF|GU_TRANSFORM_2D, count, 0, verts);
-                    sceGuEnable(GU_TEXTURE_2D);
-                } else {
-                    const VertTCV *verts = (VertTCV *) (gpumem + cmd->data.draw.first);
-                    const Uint8 a = cmd->data.draw.a;
-                    const Uint8 r = cmd->data.draw.r;
-                    const Uint8 g = cmd->data.draw.g;
-                    const Uint8 b = cmd->data.draw.b;
-                    N64_BlendState state = {
-                        .color = GU_RGBA(r,g,b,a),
-                        .texture = NULL,
-                        .mode = cmd->data.draw.blend,
-                        .shadeModel = GU_FLAT
-                    };
-                    TextureActivate(cmd->data.draw.texture);
-                    N64_SetBlendState(data, &state);
-                    sceGuDrawArray(GU_TRIANGLES, GU_TEXTURE_32BITF|GU_COLOR_8888|GU_VERTEX_32BITF|GU_TRANSFORM_2D, count, 0, verts);
-                }
+                // const size_t count = cmd->data.draw.count;
+                // if (cmd->data.draw.texture == NULL) {
+                //     const VertCV *verts = (VertCV *) (gpumem + cmd->data.draw.first);
+                //     sceGuDisable(GU_TEXTURE_2D);
+                //     /* In GU_SMOOTH mode */
+                //     sceGuDrawArray(GU_TRIANGLES, GU_COLOR_8888|GU_VERTEX_32BITF|GU_TRANSFORM_2D, count, 0, verts);
+                //     sceGuEnable(GU_TEXTURE_2D);
+                // } else {
+                //     const VertTCV *verts = (VertTCV *) (gpumem + cmd->data.draw.first);
+                //     const Uint8 a = cmd->data.draw.a;
+                //     const Uint8 r = cmd->data.draw.r;
+                //     const Uint8 g = cmd->data.draw.g;
+                //     const Uint8 b = cmd->data.draw.b;
+                //     N64_BlendState state = {
+                //         .color = GU_RGBA(r,g,b,a),
+                //         .texture = NULL,
+                //         .mode = cmd->data.draw.blend,
+                //         .shadeModel = GU_FLAT
+                //     };
+                //     TextureActivate(cmd->data.draw.texture);
+                //     N64_SetBlendState(data, &state);
+                //     sceGuDrawArray(GU_TRIANGLES, GU_TEXTURE_32BITF|GU_COLOR_8888|GU_VERTEX_32BITF|GU_TRANSFORM_2D, count, 0, verts);
+                // }
                 break;
             }
 
@@ -1230,28 +930,16 @@ N64_RenderReadPixels(SDL_Renderer * renderer, const SDL_Rect * rect,
 static void
 N64_RenderPresent(SDL_Renderer * renderer)
 {
-    N64_RenderData *data = (N64_RenderData *) renderer->driverdata;
-    if(!data->displayListAvail)
-        return;
+    N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
 
-    data->displayListAvail = SDL_FALSE;
-    sceGuFinish();
-    sceGuSync(0,0);
-
-    if ((data->vsync) && (data->vblank_not_reached))
-        sceDisplayWaitVblankStart();
-    data->vblank_not_reached = SDL_TRUE;
-
-    data->backbuffer = data->frontbuffer;
-    data->frontbuffer = vabsptr(sceGuSwapBuffers());
-
+    display_show(data->displayContext);
 }
 
 static void
 N64_DestroyTexture(SDL_Renderer * renderer, SDL_Texture * texture)
 {
-    N64_RenderData *renderdata = (N64_RenderData *) renderer->driverdata;
-    N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata;
+    N64_RenderData *renderdata = (N64_RenderData *)renderer->driverdata;
+    N64_TextureData *n64_texture = (N64_TextureData *)texture->driverdata;
 
     if (renderdata == 0)
         return;
@@ -1259,8 +947,8 @@ N64_DestroyTexture(SDL_Renderer * renderer, SDL_Texture * texture)
     if(n64_texture == 0)
         return;
 
-    LRUTargetRemove(renderdata, n64_texture);
-    TextureStorageFree(n64_texture->data);
+    // LRUTargetRemove(renderdata, n64_texture);
+    // TextureStorageFree(n64_texture->data);
     SDL_free(n64_texture);
     texture->driverdata = NULL;
 }
@@ -1268,24 +956,12 @@ N64_DestroyTexture(SDL_Renderer * renderer, SDL_Texture * texture)
 static void
 N64_DestroyRenderer(SDL_Renderer * renderer)
 {
-    N64_RenderData *data = (N64_RenderData *) renderer->driverdata;
+    N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
     if (data) {
-        if (!data->initialized)
-            return;
+        display_close();
 
-        StartDrawing(renderer);
-
-        sceKernelDisableSubIntr(N64_VBLANK_INT, 0);
-        sceKernelReleaseSubIntrHandler(N64_VBLANK_INT,0);
-        sceDisplayWaitVblankStart();
-        sceGuDisplay(GU_FALSE);
-        sceGuTerm();
-        vfree(data->backbuffer);
-        vfree(data->frontbuffer);
-
-        data->initialized = SDL_FALSE;
-        data->displayListAvail = SDL_FALSE;
         SDL_free(data);
+        renderer->driverdata = NULL;
     }
     SDL_free(renderer);
 }
@@ -1293,19 +969,16 @@ N64_DestroyRenderer(SDL_Renderer * renderer)
 static int
 N64_SetVSync(SDL_Renderer * renderer, const int vsync)
 {
-    N64_RenderData *data = renderer->driverdata;
-    data->vsync = vsync;
     return 0;
 }
 
 SDL_Renderer *
 N64_CreateRenderer(SDL_Window * window, Uint32 flags)
 {
-
     SDL_Renderer *renderer;
     N64_RenderData *data;
     int pixelformat;
-    void* doublebuffer = NULL;
+    // void* doublebuffer = NULL;
 
     renderer = (SDL_Renderer *) SDL_calloc(1, sizeof(*renderer));
     if (!renderer) {
@@ -1319,7 +992,6 @@ N64_CreateRenderer(SDL_Window * window, Uint32 flags)
         SDL_OutOfMemory();
         return NULL;
     }
-
 
     renderer->WindowEvent = N64_WindowEvent;
     renderer->CreateTexture = N64_CreateTexture;
@@ -1347,74 +1019,16 @@ N64_CreateRenderer(SDL_Window * window, Uint32 flags)
     renderer->driverdata = data;
     renderer->window = window;
 
-    if (data->initialized != SDL_FALSE)
-        return 0;
-    data->initialized = SDL_TRUE;
+    pixelformat = PixelFormatToN64FMT(SDL_GetWindowPixelFormat(window));
+    // int bpp = pixelformat == DEPTH_16_BPP ? 2 : 4;
 
-    data->most_recent_target = NULL;
-    data->least_recent_target = NULL;
+    // TODO: create a buffer to use as a texture (use sprite_t?)
+    // doublebuffer = valloc(N64_FRAME_BUFFER_SIZE * bpp * 2);
+    // data->backbuffer = doublebuffer;
+    // data->frontbuffer = ((uint8_t*)doublebuffer) + N64_FRAME_BUFFER_SIZE * bpp;
 
-    if (flags & SDL_RENDERER_PRESENTVSYNC) {
-        data->vsync = SDL_TRUE;
-    } else {
-        data->vsync = SDL_FALSE;
-    }
-
-    pixelformat=PixelFormatToN64FMT(SDL_GetWindowPixelFormat(window));
-    switch(pixelformat)
-    {
-        case GU_PSM_4444:
-        case GU_PSM_5650:
-        case GU_PSM_5551:
-            data->bpp = 2;
-            data->psm = pixelformat;
-            break;
-        default:
-            data->bpp = 4;
-            data->psm = GU_PSM_8888;
-            break;
-    }
-
-    doublebuffer = valloc(N64_FRAME_BUFFER_SIZE*data->bpp*2);
-    data->backbuffer = doublebuffer;
-    data->frontbuffer = ((uint8_t*)doublebuffer)+N64_FRAME_BUFFER_SIZE*data->bpp;
-
-    sceGuInit();
-    /* setup GU */
-    sceGuStart(GU_DIRECT, DisplayList);
-    sceGuDrawBuffer(data->psm, vrelptr(data->frontbuffer), N64_FRAME_BUFFER_WIDTH);
-    sceGuDispBuffer(N64_SCREEN_WIDTH, N64_SCREEN_HEIGHT, vrelptr(data->backbuffer), N64_FRAME_BUFFER_WIDTH);
-
-
-    sceGuOffset(2048 - (N64_SCREEN_WIDTH>>1), 2048 - (N64_SCREEN_HEIGHT>>1));
-    sceGuViewport(2048, 2048, N64_SCREEN_WIDTH, N64_SCREEN_HEIGHT);
-
-
-    sceGuDisable(GU_DEPTH_TEST);
-
-    /* Scissoring */
-    sceGuScissor(0, 0, N64_SCREEN_WIDTH, N64_SCREEN_HEIGHT);
-    sceGuEnable(GU_SCISSOR_TEST);
-
-    /* Backface culling */
-    /*
-    FIXME: Culling probably un-needed ? It can conflict with SDL_RENDERCMD_GEOMETRY
-    sceGuFrontFace(GU_CCW);
-    sceGuEnable(GU_CULL_FACE);
-    */
-
-    //Setup initial blend state
-    ResetBlendState(&data->blendState);
-
-    sceGuFinish();
-    sceGuSync(0,0);
-    sceDisplayWaitVblankStartCB();
-    sceGuDisplay(GU_TRUE);
-
-    /* Improve performance when VSYC is enabled and it is not reaching the 60 FPS */
-    data->vblank_not_reached = SDL_TRUE;
-    sceKernelRegisterSubIntrHandler(N64_VBLANK_INT, 0, n64_on_vblank, data);
-    sceKernelEnableSubIntr(N64_VBLANK_INT, 0);
+    display_init(RESOLUTION_320x240, pixelformat, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
+	rdp_init();
 
     return renderer;
 }
@@ -1423,15 +1037,13 @@ SDL_RenderDriver N64_RenderDriver = {
     .CreateRenderer = N64_CreateRenderer,
     .info = {
         .name = "N64",
-        .flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE,
-        .num_texture_formats = 4,
-        .texture_formats = { [0] = SDL_PIXELFORMAT_BGR565,
-                                                 [1] = SDL_PIXELFORMAT_ABGR1555,
-                                                 [2] = SDL_PIXELFORMAT_ABGR4444,
-                                                 [3] = SDL_PIXELFORMAT_ABGR8888,
+        .flags = SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC,
+        .num_texture_formats = 2,
+        .texture_formats = { [0] = SDL_PIXELFORMAT_ABGR1555,
+                             [1] = SDL_PIXELFORMAT_ABGR8888,
         },
-        .max_texture_width = 512,
-        .max_texture_height = 512,
+        .max_texture_width = 320,
+        .max_texture_height = 240,
      }
 };
 

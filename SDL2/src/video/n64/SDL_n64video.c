@@ -136,7 +136,7 @@ N64_VideoInit(_THIS)
 
     current_mode.refresh_rate = 60;
     /* 16 bpp for default */
-    current_mode.format = SDL_PIXELFORMAT_BGRA5551;
+    current_mode.format = SDL_PIXELFORMAT_ABGR1555;
     current_mode.driverdata = NULL;
 
     SDL_zero(display);
@@ -153,9 +153,6 @@ N64_VideoInit(_THIS)
     SDL_AddDisplayMode(&display, &current_mode);
 
     SDL_AddVideoDisplay(&display, SDL_FALSE);
-
-    display_init(RESOLUTION_320x240, DEPTH_16_BPP, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
-	rdp_init();
 
     return 1;
 }
