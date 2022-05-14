@@ -5374,8 +5374,13 @@ int SDL_SetMemoryFunctions(SDL_malloc_func malloc_func,
 
 int SDL_GetNumAllocations(void)
 {
+#ifdef N64
+    return 0;
+#endif
     return SDL_AtomicGet(&s_mem.num_allocations);
 }
+
+#ifndef N64
 
 void *SDL_malloc(size_t size)
 {
@@ -5432,5 +5437,7 @@ void SDL_free(void *ptr)
     s_mem.free_func(ptr);
     (void)SDL_AtomicDecRef(&s_mem.num_allocations);
 }
+
+#endif
 
 /* vi: set ts=4 sw=4 expandtab: */

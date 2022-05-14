@@ -200,6 +200,11 @@
 #define __VITA__ 1
 #endif
 
+#if defined(N64)
+#undef N64
+#define N64 1
+#endif
+
 #include "begin_code.h"
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus

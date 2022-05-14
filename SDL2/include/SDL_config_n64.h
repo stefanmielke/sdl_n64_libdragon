@@ -134,4 +134,9 @@
 #define SDL_HIDAPI_DISABLED    1
 #define SDL_LOADSO_DISABLED    1
 
+#define SDL_malloc malloc
+#define SDL_calloc calloc
+#define SDL_realloc realloc
+#define SDL_free free
+
 #endif /* SDL_config_n64_h_ */
