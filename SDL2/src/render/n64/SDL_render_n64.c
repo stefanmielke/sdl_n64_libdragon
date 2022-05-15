@@ -407,15 +407,7 @@ static void
 N64_UnlockTexture(SDL_Renderer *renderer, SDL_Texture *texture)
 {
     // fprintf(stderr, "N64_UnlockTexture\n");
-    N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata;
-    SDL_Rect rect;
-
-    /* We do whole texture updates, at least for now */
-    rect.x = 0;
-    rect.y = 0;
-    rect.w = texture->w;
-    rect.h = texture->h;
-    N64_UpdateTexture(renderer, texture, &rect, n64_texture->data, n64_texture->pitch);
+    // we don't need to do anything here, since the LockTexture gave access to the raw pixels in the sprite
 }
 
 static void
