@@ -367,7 +367,7 @@ static int
 N64_UpdateTexture(SDL_Renderer * renderer, SDL_Texture * texture,
                    const SDL_Rect * rect, const void *pixels, int pitch)
 {
-    fprintf(stderr, "N64_UpdateTexture\n");
+    // fprintf(stderr, "N64_UpdateTexture\n");
 /*  N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata; */
     const Uint8 *src;
     Uint8 *dst;
@@ -394,7 +394,7 @@ static int
 N64_LockTexture(SDL_Renderer *renderer, SDL_Texture *texture,
                  const SDL_Rect *rect, void **pixels, int *pitch)
 {
-    fprintf(stderr, "N64_LockTexture\n");
+    // fprintf(stderr, "N64_LockTexture\n");
     N64_TextureData *n64_texture = (N64_TextureData *)texture->driverdata;
 
     *pixels = (void *)((Uint8 *)n64_texture->data + rect->y * n64_texture->pitch +
@@ -406,7 +406,7 @@ N64_LockTexture(SDL_Renderer *renderer, SDL_Texture *texture,
 static void
 N64_UnlockTexture(SDL_Renderer * renderer, SDL_Texture * texture)
 {
-    fprintf(stderr, "N64_UnlockTexture\n");
+    // fprintf(stderr, "N64_UnlockTexture\n");
     N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata;
     SDL_Rect rect;
 
@@ -435,7 +435,7 @@ N64_SetRenderTarget(SDL_Renderer * renderer, SDL_Texture * texture)
 static int
 N64_QueueSetViewport(SDL_Renderer * renderer, SDL_RenderCommand *cmd)
 {
-    fprintf(stderr, "N64_QueueSetViewport\n");
+    // fprintf(stderr, "N64_QueueSetViewport\n");
     return 0;  /* nothing to do in this backend. */
 }
 
@@ -582,42 +582,42 @@ static int
 N64_QueueCopy(SDL_Renderer *renderer, SDL_RenderCommand *cmd, SDL_Texture *texture,
              const SDL_Rect *srcrect, const SDL_FRect *dstrect)
 {
-    fprintf(stderr, "N64_QueueCopy\n");
-    VertTV *verts;
-    verts = (VertTV *)SDL_AllocateRenderVertices(renderer, 2 * sizeof(VertTV), 4, &cmd->data.draw.first);
-    if (!verts) {
-        fprintf(stderr, "N64_QueueCopy error\n");
-        return -1;
-    }
+    // fprintf(stderr, "N64_QueueCopy\n");
+    // VertTV *verts;
+    // verts = (VertTV *)SDL_AllocateRenderVertices(renderer, 2 * sizeof(VertTV), 4, &cmd->data.draw.first);
+    // if (!verts) {
+    //     fprintf(stderr, "N64_QueueCopy error\n");
+    //     return -1;
+    // }
 
-    const float x = dstrect->x;
-    const float y = dstrect->y;
-    const float width = dstrect->w;
-    const float height = dstrect->h;
+    // const float x = dstrect->x;
+    // const float y = dstrect->y;
+    // const float width = dstrect->w;
+    // const float height = dstrect->h;
 
-    const float u0 = srcrect->x;
-    const float v0 = srcrect->y;
-    const float u1 = srcrect->x + srcrect->w;
-    const float v1 = srcrect->y + srcrect->h;
+    // const float u0 = srcrect->x;
+    // const float v0 = srcrect->y;
+    // const float u1 = srcrect->x + srcrect->w;
+    // const float v1 = srcrect->y + srcrect->h;
 
-    fprintf(stderr, "   u:%.2f,v:%.2f,x:%.2f,y:%.2f\n", u0, v0, x, y);
-    fprintf(stderr, "   u:%.2f,v:%.2f,x:%.2f,y:%.2f\n", u1, v1, x + width, y + height);
+    // fprintf(stderr, "   u:%.2f,v:%.2f,x:%.2f,y:%.2f\n", u0, v0, x, y);
+    // fprintf(stderr, "   u:%.2f,v:%.2f,x:%.2f,y:%.2f\n", u1, v1, x + width, y + height);
 
-    cmd->data.draw.count = 1;
+    // cmd->data.draw.count = 1;
 
-    verts->u = u0;
-    verts->v = v0;
-    verts->x = x;
-    verts->y = y;
-    verts->z = 0;
-    verts++;
+    // verts->u = u0;
+    // verts->v = v0;
+    // verts->x = x;
+    // verts->y = y;
+    // verts->z = 0;
+    // verts++;
 
-    verts->u = u1;
-    verts->v = v1;
-    verts->x = x + width;
-    verts->y = y + height;
-    verts->z = 0;
-    verts++;
+    // verts->u = u1;
+    // verts->v = v1;
+    // verts->x = x + width;
+    // verts->y = y + height;
+    // verts->z = 0;
+    // verts++;
 
     return 0;
 }
@@ -704,7 +704,7 @@ ResetBlendState(N64_BlendState* state)
 static void
 StartDrawing(SDL_Renderer *renderer)
 {
-    fprintf(stderr, "StartDrawing\n");
+    // fprintf(stderr, "StartDrawing\n");
     N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
     
     data->displayContext = 0;
@@ -721,7 +721,7 @@ N64_SetBlendState(N64_RenderData *data, N64_BlendState *state)
 static int
 N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *vertices, size_t vertsize)
 {
-    fprintf(stderr, "N64_RunCommandQueue\n");
+    // fprintf(stderr, "N64_RunCommandQueue\n");
     N64_RenderData *data = (N64_RenderData *) renderer->driverdata;
     StartDrawing(renderer);
 
@@ -734,12 +734,12 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
     while (cmd) {
         switch (cmd->command) {
             case SDL_RENDERCMD_SETDRAWCOLOR: {
-                fprintf(stderr, "\tSDL_RENDERCMD_SETDRAWCOLOR\n");
+                // fprintf(stderr, "\tSDL_RENDERCMD_SETDRAWCOLOR\n");
                 break;
             }
 
             case SDL_RENDERCMD_SETVIEWPORT: {
-                fprintf(stderr, "\tSDL_RENDERCMD_SETVIEWPORT\n");
+                // fprintf(stderr, "\tSDL_RENDERCMD_SETVIEWPORT\n");
                 // SDL_Rect *viewport = &cmd->data.viewport.rect;
                 // sceGuOffset(2048 - (viewport->w >> 1), 2048 - (viewport->h >> 1));
                 // sceGuViewport(2048, 2048, viewport->w, viewport->h);
@@ -748,7 +748,7 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
             }
 
             case SDL_RENDERCMD_SETCLIPRECT: {
-                fprintf(stderr, "\tSDL_RENDERCMD_SETCLIPRECT\n");
+                // fprintf(stderr, "\tSDL_RENDERCMD_SETCLIPRECT\n");
                 // const SDL_Rect *rect = &cmd->data.cliprect.rect;
                 // if(cmd->data.cliprect.enabled){
                 //     sceGuEnable(GU_SCISSOR_TEST);
@@ -760,11 +760,13 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
             }
 
             case SDL_RENDERCMD_CLEAR: {
-                fprintf(stderr, "\tSDL_RENDERCMD_CLEAR\n");
+                // fprintf(stderr, "\tSDL_RENDERCMD_CLEAR\n");
                 const Uint8 r = cmd->data.color.r;
                 const Uint8 g = cmd->data.color.g;
                 const Uint8 b = cmd->data.color.b;
                 const Uint8 a = cmd->data.color.a;
+
+                // fprintf(stderr, "       %u, %u, %u, %u\n", r, g, b, a);
 
                 uint32_t color = graphics_make_color(r, g, b, a);
                 graphics_fill_screen(data->displayContext, color);
@@ -821,7 +823,7 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
             }
 
             case SDL_RENDERCMD_COPY: {
-                fprintf(stderr, "\tSDL_RENDERCMD_COPY\n");
+                // fprintf(stderr, "\tSDL_RENDERCMD_COPY\n");
                 // const size_t count = cmd->data.draw.count;
                 // const VertTV *verts = (VertTV *)(cmd->data.draw.first);
                 // const Uint8 a = cmd->data.draw.a;
@@ -906,7 +908,7 @@ N64_RenderReadPixels(SDL_Renderer * renderer, const SDL_Rect * rect,
 static void
 N64_RenderPresent(SDL_Renderer * renderer)
 {
-    fprintf(stderr, "N64_RenderPresent\n");
+    // fprintf(stderr, "N64_RenderPresent\n");
     N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
 
     display_show(data->displayContext);
@@ -954,13 +956,12 @@ N64_SetVSync(SDL_Renderer * renderer, const int vsync)
 }
 
 SDL_Renderer *
-N64_CreateRenderer(SDL_Window * window, Uint32 flags)
+N64_CreateRenderer(SDL_Window *window, Uint32 flags)
 {
     fprintf(stderr, "N64_CreateRenderer\n");
     SDL_Renderer *renderer;
     N64_RenderData *data;
     int pixelformat;
-    // void* doublebuffer = NULL;
 
     renderer = (SDL_Renderer *) SDL_calloc(1, sizeof(*renderer));
     if (!renderer) {
@@ -1002,14 +1003,22 @@ N64_CreateRenderer(SDL_Window * window, Uint32 flags)
     renderer->window = window;
 
     pixelformat = PixelFormatToN64FMT(SDL_GetWindowPixelFormat(window));
-    // int bpp = pixelformat == DEPTH_16_BPP ? 2 : 4;
 
-    // TODO: create a buffer to use as a texture (use sprite_t?)
-    // doublebuffer = valloc(N64_FRAME_BUFFER_SIZE * bpp * 2);
-    // data->backbuffer = doublebuffer;
-    // data->frontbuffer = ((uint8_t*)doublebuffer) + N64_FRAME_BUFFER_SIZE * bpp;
+    SDL_DisplayMode mode;
+    SDL_GetWindowDisplayMode(window, &mode);
 
-    display_init(RESOLUTION_320x240, pixelformat, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
+	int ld_resolution = RESOLUTION_320x240;
+    int w = mode.w;
+    int h = mode.h;
+	if (w > 512) {
+		ld_resolution = h > 240 ? RESOLUTION_640x480 : RESOLUTION_640x240;
+	} else if (w > 320) {
+		ld_resolution = h > 240 ? RESOLUTION_512x480 : RESOLUTION_512x240;
+	} else {
+		ld_resolution = w > 256 ? RESOLUTION_320x240 : RESOLUTION_256x240;
+	}
+
+    display_init(ld_resolution, pixelformat, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
 	rdp_init();
 
     return renderer;
@@ -1021,11 +1030,11 @@ SDL_RenderDriver N64_RenderDriver = {
         .name = "N64",
         .flags = SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC,
         .num_texture_formats = 2,
-        .texture_formats = { [0] = SDL_PIXELFORMAT_ABGR1555,
-                             [1] = SDL_PIXELFORMAT_ABGR8888,
+        .texture_formats = { [0] = SDL_PIXELFORMAT_RGBA5551,
+                             [1] = SDL_PIXELFORMAT_RGBA8888,
         },
-        .max_texture_width = 320,
-        .max_texture_height = 240,
+        .max_texture_width = 640,
+        .max_texture_height = 480,
      }
 };
 
