@@ -29,7 +29,6 @@
 #include "../SDL_joystick_c.h"
 
 struct controller_data keys_pressed;
-struct controller_data keys_down;
 
 static int numjoysticks = 0;
 static int controllers_connected = 0;
@@ -122,7 +121,8 @@ static int N64_JoystickOpen(SDL_Joystick *joystick, int device_index)
 }
 
 
-Sint16 N64_GetAxisFromController(int pad_id, int axis) {
+Sint16 N64_GetAxisFromController(int pad_id, int axis)
+{
 	const int max_axis_value = 70;
 	const float multiplier = (float)SDL_JOYSTICK_AXIS_MAX / max_axis_value;
 
@@ -161,6 +161,7 @@ Uint8 N64_JoystickGetHat(int pad_id)
 static void N64_JoystickUpdate(SDL_Joystick *joystick)
 {
 	controller_scan();
+    keys_pressed = get_keys_pressed();
     
     const int pad_id = joystick->instance_id;
 
