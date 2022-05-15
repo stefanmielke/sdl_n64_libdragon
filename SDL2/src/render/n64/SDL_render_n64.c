@@ -389,15 +389,14 @@ N64_UpdateTexture(SDL_Renderer * renderer, SDL_Texture * texture,
 }
 
 static int
-N64_LockTexture(SDL_Renderer * renderer, SDL_Texture * texture,
-                 const SDL_Rect * rect, void **pixels, int *pitch)
+N64_LockTexture(SDL_Renderer *renderer, SDL_Texture *texture,
+                 const SDL_Rect *rect, void **pixels, int *pitch)
 {
     fprintf(stderr, "N64_LockTexture\n");
-    N64_TextureData *n64_texture = (N64_TextureData *) texture->driverdata;
+    N64_TextureData *n64_texture = (N64_TextureData *)texture->driverdata;
 
-    *pixels =
-        (void *) ((Uint8 *) n64_texture->data + rect->y * n64_texture->pitch +
-                  rect->x * SDL_BYTESPERPIXEL(texture->format));
+    *pixels = (void *)((Uint8 *)n64_texture->data + rect->y * n64_texture->pitch +
+                rect->x * SDL_BYTESPERPIXEL(texture->format));
     *pitch = n64_texture->pitch;
     return 0;
 }
@@ -833,17 +832,18 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
                 // fprintf(stderr, "       u:%.2f,v:%.2f,x:%.2f,y:%.2f\n", verts->u, verts->v, verts->x, verts->y);
 
                 N64_TextureData *n64_texture = cmd->data.draw.texture->driverdata;
-                sprite_t sprite;
-                sprite.width = 320;
-                sprite.height = 200;
-                sprite.bitdepth = 2;
-                sprite.vslices = 1;
-                sprite.hslices = 1;
-                *sprite.data = (uint16_t)n64_texture->data;
+                sprite_t *sprite = SDL_calloc(1, sizeof(sprite_t) + n64_texture->size);
+                sprite->width = 320;
+                sprite->height = 200;
+                sprite->bitdepth = 2;
+                sprite->vslices = 1;
+                sprite->hslices = 1;
+                memcpy(sprite->data, n64_texture->data, n64_texture->size);
                 // graphics_draw_box(data->displayContext, 10, 10, 10 ,10, 0xfff); // this works!
-                graphics_draw_sprite(data->displayContext, 0, 0, &sprite);
+                graphics_draw_sprite(data->displayContext, 0, 0, sprite);
                 // N64_SetBlendState(data, &state);
                 // sceGuDrawArray(GU_SPRITES, GU_TEXTURE_32BITF|GU_VERTEX_32BITF|GU_TRANSFORM_2D, 2 * count, 0, verts);
+                free(sprite);
                 break;
             }
 
