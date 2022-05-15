@@ -57,9 +57,7 @@ typedef struct N64_TextureData
     unsigned int        bits;                               /**< Image bits per pixel. */
     unsigned int        format;                             /**< Image format - one of ::pgePixelFormat. */
     unsigned int        pitch;
-    SDL_bool            swizzled;                           /**< Is image swizzled. */
-    struct N64_TextureData*    prevhotw;                    /**< More recently used render target */
-    struct N64_TextureData*    nexthotw;                    /**< Less recently used render target */
+    sprite_t            *sprite;
 } N64_TextureData;
 
 typedef struct N64_BlendState
@@ -146,55 +144,55 @@ PixelFormatToN64FMT(Uint32 format)
  int
 TextureSwizzle(N64_TextureData *n64_texture, void* dst)
 {
-    int bytewidth, height;
-    int rowblocks, rowblocksadd;
-    int i, j;
-    unsigned int blockaddress = 0;
-    unsigned int *src = NULL;
-    unsigned char *data = NULL;
+    // int bytewidth, height;
+    // int rowblocks, rowblocksadd;
+    // int i, j;
+    // unsigned int blockaddress = 0;
+    // unsigned int *src = NULL;
+    // unsigned char *data = NULL;
 
-    if(n64_texture->swizzled)
-        return 1;
+    // if(n64_texture->swizzled)
+    //     return 1;
 
-    bytewidth = n64_texture->textureWidth*(n64_texture->bits>>3);
-    height = n64_texture->size / bytewidth;
+    // bytewidth = n64_texture->textureWidth*(n64_texture->bits>>3);
+    // height = n64_texture->size / bytewidth;
 
-    rowblocks = (bytewidth>>4);
-    rowblocksadd = (rowblocks-1)<<7;
+    // rowblocks = (bytewidth>>4);
+    // rowblocksadd = (rowblocks-1)<<7;
 
-    src = (unsigned int*) n64_texture->data;
+    // src = (unsigned int*) n64_texture->data;
 
-    data = dst;
-    if(!data) {
-        data = SDL_malloc(n64_texture->size);
-    }
+    // data = dst;
+    // if(!data) {
+    //     data = SDL_malloc(n64_texture->size);
+    // }
 
-    if(!data) {
-        return SDL_OutOfMemory();
-    }
+    // if(!data) {
+    //     return SDL_OutOfMemory();
+    // }
 
-    for(j = 0; j < height; j++, blockaddress += 16)
-    {
-        unsigned int *block;
+    // for(j = 0; j < height; j++, blockaddress += 16)
+    // {
+    //     unsigned int *block;
 
-        block = (unsigned int*)&data[blockaddress];
+    //     block = (unsigned int*)&data[blockaddress];
 
-        for(i = 0; i < rowblocks; i++)
-        {
-            *block++ = *src++;
-            *block++ = *src++;
-            *block++ = *src++;
-            *block++ = *src++;
-            block += 28;
-        }
+    //     for(i = 0; i < rowblocks; i++)
+    //     {
+    //         *block++ = *src++;
+    //         *block++ = *src++;
+    //         *block++ = *src++;
+    //         *block++ = *src++;
+    //         block += 28;
+    //     }
 
-        if((j & 0x7) == 0x7)
-            blockaddress += rowblocksadd;
-    }
+    //     if((j & 0x7) == 0x7)
+    //         blockaddress += rowblocksadd;
+    // }
 
-    // TextureStorageFree(n64_texture->data);
-    n64_texture->data = data;
-    n64_texture->swizzled = SDL_TRUE;
+    // // TextureStorageFree(n64_texture->data);
+    // n64_texture->data = data;
+    // n64_texture->swizzled = SDL_TRUE;
 
     // sceKernelDcacheWritebackRange(n64_texture->data, n64_texture->size);
     return 1;
@@ -203,70 +201,70 @@ TextureSwizzle(N64_TextureData *n64_texture, void* dst)
  int
 TextureUnswizzle(N64_TextureData *n64_texture, void* dst)
 {
-    int bytewidth, height;
-    int widthblocks, heightblocks;
-    int dstpitch, dstrow;
-    int blockx, blocky;
-    int j;
-    unsigned int *src = NULL;
-    unsigned char *data = NULL;
-    unsigned char *ydst = NULL;
+    // int bytewidth, height;
+    // int widthblocks, heightblocks;
+    // int dstpitch, dstrow;
+    // int blockx, blocky;
+    // int j;
+    // unsigned int *src = NULL;
+    // unsigned char *data = NULL;
+    // unsigned char *ydst = NULL;
 
-    if(!n64_texture->swizzled)
-        return 1;
+    // if(!n64_texture->swizzled)
+    //     return 1;
 
-    bytewidth = n64_texture->textureWidth*(n64_texture->bits>>3);
-    height = n64_texture->size / bytewidth;
+    // bytewidth = n64_texture->textureWidth*(n64_texture->bits>>3);
+    // height = n64_texture->size / bytewidth;
 
-    widthblocks = bytewidth/16;
-    heightblocks = height/8;
+    // widthblocks = bytewidth/16;
+    // heightblocks = height/8;
 
-    dstpitch = (bytewidth - 16)/4;
-    dstrow = bytewidth * 8;
+    // dstpitch = (bytewidth - 16)/4;
+    // dstrow = bytewidth * 8;
 
-    src = (unsigned int*) n64_texture->data;
+    // src = (unsigned int*) n64_texture->data;
 
-    data = dst;
+    // data = dst;
 
-    if(!data) {
-        data = SDL_malloc(n64_texture->size);
-    }
+    // if(!data) {
+    //     data = SDL_malloc(n64_texture->size);
+    // }
 
-    if(!data)
-        return SDL_OutOfMemory();
+    // if(!data)
+    //     return SDL_OutOfMemory();
 
-    ydst = (unsigned char *)data;
+    // ydst = (unsigned char *)data;
 
-    for(blocky = 0; blocky < heightblocks; ++blocky)
-    {
-        unsigned char *xdst = ydst;
+    // for(blocky = 0; blocky < heightblocks; ++blocky)
+    // {
+    //     unsigned char *xdst = ydst;
 
-        for(blockx = 0; blockx < widthblocks; ++blockx)
-        {
-            unsigned int *block;
+    //     for(blockx = 0; blockx < widthblocks; ++blockx)
+    //     {
+    //         unsigned int *block;
 
-            block = (unsigned int*)xdst;
+    //         block = (unsigned int*)xdst;
 
-            for(j = 0; j < 8; ++j)
-            {
-                *(block++) = *(src++);
-                *(block++) = *(src++);
-                *(block++) = *(src++);
-                *(block++) = *(src++);
-                block += dstpitch;
-            }
+    //         for(j = 0; j < 8; ++j)
+    //         {
+    //             *(block++) = *(src++);
+    //             *(block++) = *(src++);
+    //             *(block++) = *(src++);
+    //             *(block++) = *(src++);
+    //             block += dstpitch;
+    //         }
 
-            xdst += 16;
-        }
+    //         xdst += 16;
+    //     }
 
-        ydst += dstrow;
-    }
+    //     ydst += dstrow;
+    // }
 
     // TextureStorageFree(n64_texture->data);
 
-    n64_texture->data = data;
+    // n64_texture->data = data;
 
-    n64_texture->swizzled = SDL_FALSE;
+    // n64_texture->swizzled = SDL_FALSE;
 
     // sceKernelDcacheWritebackRange(n64_texture->data, n64_texture->size);
     return 1;
@@ -289,14 +287,10 @@ static int
 N64_CreateTexture(SDL_Renderer *renderer, SDL_Texture *texture)
 {
     fprintf(stderr, "N64_CreateTexture\n");
-    fprintf(stderr, "   w: %d, h: %d\n", texture->w, texture->h);
-    // N64_RenderData *data = renderer->driverdata;
     N64_TextureData *n64_texture = (N64_TextureData *)SDL_calloc(1, sizeof(*n64_texture));
-
     if(!n64_texture)
         return SDL_OutOfMemory();
 
-    n64_texture->swizzled = SDL_FALSE;
     n64_texture->width = texture->w;
     n64_texture->height = texture->h;
     n64_texture->textureHeight = TextureNextPow2(texture->h);
@@ -317,9 +311,17 @@ N64_CreateTexture(SDL_Renderer *renderer, SDL_Texture *texture)
 
     n64_texture->pitch = n64_texture->width * SDL_BYTESPERPIXEL(texture->format);
     n64_texture->size = n64_texture->height * n64_texture->pitch;
-    n64_texture->data = SDL_calloc(1, n64_texture->size);
-    fprintf(stderr, "   size: %u\n", n64_texture->size);
 
+    sprite_t *sprite = SDL_calloc(1, sizeof(sprite_t) + n64_texture->size);
+    sprite->width = n64_texture->width;
+    sprite->height = n64_texture->height;
+    sprite->bitdepth = SDL_BYTESPERPIXEL(texture->format);
+    sprite->vslices = 1;
+    sprite->hslices = 1;
+    
+    n64_texture->sprite = sprite;
+
+    n64_texture->data = n64_texture->sprite->data;
     if(!n64_texture->data)
     {
         SDL_free(n64_texture);
@@ -832,18 +834,7 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
                 // fprintf(stderr, "       u:%.2f,v:%.2f,x:%.2f,y:%.2f\n", verts->u, verts->v, verts->x, verts->y);
 
                 N64_TextureData *n64_texture = cmd->data.draw.texture->driverdata;
-                sprite_t *sprite = SDL_calloc(1, sizeof(sprite_t) + n64_texture->size);
-                sprite->width = 320;
-                sprite->height = 200;
-                sprite->bitdepth = 2;
-                sprite->vslices = 1;
-                sprite->hslices = 1;
-                memcpy(sprite->data, n64_texture->data, n64_texture->size);
-                // graphics_draw_box(data->displayContext, 10, 10, 10 ,10, 0xfff); // this works!
-                graphics_draw_sprite(data->displayContext, 0, 0, sprite);
-                // N64_SetBlendState(data, &state);
-                // sceGuDrawArray(GU_SPRITES, GU_TEXTURE_32BITF|GU_VERTEX_32BITF|GU_TRANSFORM_2D, 2 * count, 0, verts);
-                free(sprite);
+                graphics_draw_sprite(data->displayContext, 0, 0, n64_texture->sprite);
                 break;
             }
 
@@ -936,6 +927,7 @@ N64_DestroyTexture(SDL_Renderer * renderer, SDL_Texture * texture)
 
     // LRUTargetRemove(renderdata, n64_texture);
     // TextureStorageFree(n64_texture->data);
+    SDL_free(n64_texture->sprite);
     SDL_free(n64_texture);
     texture->driverdata = NULL;
 }
