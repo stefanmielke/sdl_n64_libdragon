@@ -127,10 +127,17 @@ Sint16 N64_GetAxisFromController(int pad_id, int axis)
 
 	int value = 0;
 	if (axis == 0) {
-		value = fmin((int)keys_pressed.c[pad_id].x, max_axis_value);
+		value = (int)keys_pressed.c[pad_id].x;
 	} else {
-		value = -fmin((int)keys_pressed.c[pad_id].y, max_axis_value);
+		value = -(int)keys_pressed.c[pad_id].y;
 	}
+    if (value > -20 && value < 20) {
+        value = 0;
+    } else if (value > max_axis_value) {
+        value = max_axis_value;
+    } else if (value < -max_axis_value) {
+        value = -max_axis_value;
+    }
 
 	return (Sint16)(multiplier * value);
 }
