@@ -120,7 +120,6 @@ static int N64_JoystickOpen(SDL_Joystick *joystick, int device_index)
     return 0;
 }
 
-
 Sint16 N64_GetAxisFromController(int pad_id, int axis)
 {
 	const int max_axis_value = 70;
@@ -130,7 +129,7 @@ Sint16 N64_GetAxisFromController(int pad_id, int axis)
 	if (axis == 0) {
 		value = fmin((int)keys_pressed.c[pad_id].x, max_axis_value);
 	} else {
-		value = fmin((int)keys_pressed.c[pad_id].y, max_axis_value);
+		value = -fmin((int)keys_pressed.c[pad_id].y, max_axis_value);
 	}
 
 	return (Sint16)(multiplier * value);
