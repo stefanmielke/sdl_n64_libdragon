@@ -53,7 +53,7 @@ SDL_GetTicks64(void)
         SDL_TicksInit();
     }
 
-    return get_ticks();
+    return get_ticks_ms();
 }
 
 Uint64
