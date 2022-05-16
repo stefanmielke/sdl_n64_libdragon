@@ -53,7 +53,7 @@ SDL_GetTicks64(void)
         SDL_TicksInit();
     }
 
-    return get_ticks_ms();
+    return timer_ticks() / (TICKS_PER_SECOND / 1000);
 }
 
 Uint64
@@ -70,8 +70,8 @@ SDL_GetPerformanceFrequency(void)
 
 void SDL_Delay(Uint32 ms)
 {
-    unsigned long ticks = get_ticks_ms();
-    while(get_ticks_ms() < ticks + ms)
+    unsigned long ticks = SDL_GetTicks64();
+    while(SDL_GetTicks64() < ticks + ms)
         ;
     // do not delay?
     // the N64 operates at 60hz or 50hz varying on the region, no need to lock the thread

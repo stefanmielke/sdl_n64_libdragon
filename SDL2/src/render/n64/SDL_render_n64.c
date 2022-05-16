@@ -906,19 +906,17 @@ N64_RenderReadPixels(SDL_Renderer *renderer, const SDL_Rect *rect,
     return SDL_Unsupported();
 }
 
-#include <malloc.h>
-void print_memory(display_context_t disp) {
-    struct mallinfo mem_info = mallinfo();
-    int mem_used = mem_info.uordblks / 1024;
-    int mem_total = get_memory_size() / 1024;
+// #include <malloc.h>
+// void print_memory(display_context_t disp) {
+//     struct mallinfo mem_info = mallinfo();
+//     int mem_used = mem_info.uordblks / 1024;
+//     int mem_total = get_memory_size() / 1024;
 
-    char text[100];
-    snprintf(text, 100, "total_mem: %dKB/%dKB\n", mem_used, mem_total);
-    graphics_set_color(0xffffffff, 0x000000ff);
-    graphics_draw_text(disp, 10, 10, text);
-    snprintf(text, 100, "ticks: %lu, %lx\n", get_ticks_ms(), C0_COUNT());
-    graphics_draw_text(disp, 10, 230, text);
-}
+//     char text[100];
+//     snprintf(text, 100, "total_mem: %dKB/%dKB\n", mem_used, mem_total);
+//     graphics_set_color(0xffffffff, 0x000000ff);
+//     graphics_draw_text(disp, 10, 10, text);
+// }
 
 static void
 N64_RenderPresent(SDL_Renderer * renderer)
@@ -926,7 +924,7 @@ N64_RenderPresent(SDL_Renderer * renderer)
     // fprintf(stderr, "N64_RenderPresent\n");
     N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
 
-    print_memory(data->displayContext);
+    // print_memory(data->displayContext);
 
     display_show(data->displayContext);
 }
