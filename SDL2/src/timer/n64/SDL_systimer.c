@@ -33,10 +33,7 @@ SDL_TicksInit(void)
         return;
     }
     ticks_started = SDL_TRUE;
-    
-    dfs_init(0xB0201000);
 
-    debug_init_isviewer();
     timer_init();
 }
 
