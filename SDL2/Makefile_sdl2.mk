@@ -1,4 +1,4 @@
-SDL2_SOURCE_DIR = libs/sdl_n64/SDL2/src
+SDL2_SOURCE_DIR ?= libs/sdl_n64/SDL2/src
 
 N64_CFLAGS += -D_POSIX_C_SOURCE=0 -D__MIPS__
 
