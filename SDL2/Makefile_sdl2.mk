@@ -1,6 +1,7 @@
 SDL2_ROOT_DIR ?= libs/sdl_n64/SDL2
 
-N64_CFLAGS += -D_POSIX_C_SOURCE=0 -D__MIPS__ -I$(SDL2_ROOT_DIR)/include
+N64_CFLAGS   += -D_POSIX_C_SOURCE=0 -D__MIPS__ -I$(SDL2_ROOT_DIR)/include
+N64_CXXFLAGS += -I$(SDL2_ROOT_DIR)/include
 
 # warnings from original code
 N64_CFLAGS += -Wno-error=maybe-uninitialized -Wno-error=use-after-free
