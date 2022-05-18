@@ -3,8 +3,7 @@ SDL2_ROOT_DIR ?= libs/sdl_n64/SDL2
 N64_CFLAGS += -D_POSIX_C_SOURCE=0 -D__MIPS__ -I$(SDL2_ROOT_DIR)/include
 
 # warnings from original code
-N64_CFLAGS += -Wno-error=format-truncation -Wno-format-truncation -Wno-error=format -Wno-error=array-bounds
-N64_CFLAGS += -Wno-error=format-overflow= -Wno-error=restrict -Wno-error=maybe-uninitialized -Wno-error=use-after-free -Wno-error=pointer-to-int-cast
+N64_CFLAGS += -Wno-error=maybe-uninitialized -Wno-error=use-after-free
 
 C_SDL_FILES  := $(wildcard ${SDL2_ROOT_DIR}/src/*.c) \
 				$(wildcard ${SDL2_ROOT_DIR}/src/atomic/*.c) \
