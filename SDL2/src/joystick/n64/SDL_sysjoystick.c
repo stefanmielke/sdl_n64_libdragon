@@ -28,7 +28,7 @@
 #include "../SDL_sysjoystick.h"
 #include "../SDL_joystick_c.h"
 
-struct controller_data keys_pressed;
+static struct controller_data keys_pressed;
 
 static int numjoysticks = 0;
 static int controllers_connected = 0;
