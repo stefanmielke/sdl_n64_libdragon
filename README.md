@@ -8,7 +8,9 @@ If you need a function and it's not implemented it should give linker errors. Yo
 
 ## Usage
 
-Copy all lib/SDL or lib/SDL2 into your project.
+### SDL 1
+
+Copy all lib/SDL into your project.
 
 Set to compile all `.c` files inside that folder.
 
@@ -43,3 +45,15 @@ clean:
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 ```
+
+### SDL 2
+
+Include the source as submodule or copy this repository.
+
+Include `/SDL2/Makefile_sdl2.mk` into your makefile.
+
+Add `$(C_SDL_FILES)` to your C source files for compilation, and set `SDL2_ROOT_DIR` to the root of the SDL2 folder (`SDL2/` on this repo).
+
+You may also need to relocate the DFS file inside your ROM due to the amount of code that is inside SDL2. So use `N64_DFS_OFFSET` to set it accordingly.
+
+You can find Makefiles using SDL2 [here](https://github.com/stefanmielke/opentyrian/blob/master/Makefile) and [here](https://github.com/stefanmielke/nKaruga_n64/blob/master/Makefile.n64).
