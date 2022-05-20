@@ -726,7 +726,7 @@ do_layer_surface(SDL_Surface * surface, SDL_RWops * src, xcf_header * head, xcf_
                         }
                         break;
                     default:
-                        SDL_Log("Unknown Gimp image type (%d)\n", head->image_type);
+                        SDL_Log("Unknown Gimp image type (%ld)\n", head->image_type);
                         if (hierarchy) {
                             free_xcf_hierarchy(hierarchy);
                         }
@@ -757,7 +757,7 @@ do_layer_surface(SDL_Surface * surface, SDL_RWops * src, xcf_header * head, xcf_
                         }
                         break;
                     default:
-                        SDL_Log("Unknown Gimp image type (%d)\n", head->image_type);
+                        SDL_Log("Unknown Gimp image type (%ld)\n", head->image_type);
                         if (tile)
                             free_xcf_tile(tile);
                         if (level)

@@ -23,10 +23,6 @@
 
 #include "SDL_image.h"
 
-#ifndef LOAD_SPRITE
-#define LOAD_SPRITE
-#endif
-
 #ifdef LOAD_SPRITE
 
 #include <libdragon.h>
