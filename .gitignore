@@ -9,3 +9,5 @@ build.log
 
 *.o
 *.d
+
+/SDL2_*n64.a
