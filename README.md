@@ -44,9 +44,8 @@ all: hello.z64
 
 # adding files to compile
 SDL := $(wildcard lib/SDL/*.c)
-SDL2 := $(wildcard lib/SDL2/*.c)
 # choose one below
-OBJS = $(BUILD_DIR)/main.o $(SDL:%.c=%.o) OR $(SDL2:%.c=%.o)
+OBJS = $(BUILD_DIR)/main.o $(SDL:%.c=%.o)
 
 hello.z64: N64_ROM_TITLE="Hello World"
 
