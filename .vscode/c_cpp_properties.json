@@ -1,0 +1,24 @@
+{
+	"configurations": [
+		{
+			"name": "N64",
+			"includePath": [
+				"${default}",
+				"SDL2/include",
+				"SDL2/src",
+				"SDL2_image/include",
+				"SDL2_image/src"
+			],
+			"defines": [
+				"N64",
+				"__MIPS__"
+			],
+			"compilerPath": "/usr/local/bin/mips64-elf-gcc",
+			"cStandard": "gnu99",
+			"cppStandard": "gnu++11",
+			"intelliSenseMode": "linux-gcc-x64",
+			"configurationProvider": "ms-vscode.makefile-tools"
+		}
+	],
+	"version": 4
+}
