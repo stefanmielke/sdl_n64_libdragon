@@ -75,6 +75,6 @@ You can find Makefiles using SDL2 [here](https://github.com/stefanmielke/opentyr
 
 Include the source as submodule or copy this repository.
 
-Include `/SDL2_image/Makefile_sdl2.mk` into your makefile.
+Include `/SDL2_image/Makefile_sdl2_image.mk` into your makefile.
 
 Add `$(C_SDL_IMAGE_FILES)` to your C source files for compilation, and set `SDL2_IMAGE_ROOT_DIR` to the root of the SDL2 folder (`/SDL2_image` on this repo).
