@@ -1,6 +1,7 @@
 # Nintendo 64 port of SDL 1 and 2, and SDL2_Image
 
-It includes all header files used by SDL and SDL2, but not necessarily implement all functions.
+The SDL 1 port has all the headers, but does not implement all functions.
+The SDL 2 port has all the code from SDL 2, but the renderer does not have all functionality, and does not support sound.
 
 If you need a function and it's not implemented it should give linker errors. You are free to implement those functions anywhere in your project, as long as you compile that file.
 
