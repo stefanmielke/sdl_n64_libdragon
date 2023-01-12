@@ -16,7 +16,7 @@ SDL_Surface *SDL_SetVideoMode(int w, int h, int bpp, Uint32 flags) {
 	internal_surface.hwdata->type = ST_DISPLAY;
 	internal_surface.hwdata->data.disp = 0;
 
-	int ld_resolution = RESOLUTION_320x240;
+	resolution_t ld_resolution = RESOLUTION_320x240;
 	const int ld_bpp = bpp > 16 ? DEPTH_32_BPP : DEPTH_16_BPP;
 	const int ld_buffers = 2;
 
