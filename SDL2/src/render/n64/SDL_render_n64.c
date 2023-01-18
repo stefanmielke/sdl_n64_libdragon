@@ -1017,7 +1017,7 @@ N64_CreateRenderer(SDL_Window *window, Uint32 flags)
     SDL_GetWindowDisplayMode(window, &mode);
 
     // only support 320x240, on the first print below, garbage may come on 'mode.w' and it sets the res to 640 by mistake
-	int ld_resolution = RESOLUTION_320x240;
+	resolution_t ld_resolution = RESOLUTION_320x240;
     // int w = mode.w;
     // int h = mode.h;
 	// if (w > 512) {
