@@ -134,7 +134,7 @@ static int
 PixelFormatToN64FMT(Uint32 format)
 {
     switch (format) {
-    case SDL_PIXELFORMAT_ABGR8888:
+    case SDL_PIXELFORMAT_RGBA8888:
         return DEPTH_32_BPP;
     default:
         return DEPTH_16_BPP;
