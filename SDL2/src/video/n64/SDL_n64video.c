@@ -35,6 +35,17 @@
 #include "SDL_n64video.h"
 #include "SDL_n64events_c.h"
 
+static int
+PixelFormatToN64FMT(Uint32 format)
+{
+    switch (format) {
+    case SDL_PIXELFORMAT_RGBA8888:
+        return DEPTH_32_BPP;
+    default:
+        return DEPTH_16_BPP;
+    }
+}
+
 static void
 N64_Destroy(SDL_VideoDevice * device)
 {
@@ -66,7 +77,7 @@ N64_Create()
     }
 
     device->driverdata = phdata;
-    phdata->egl_initialized = SDL_TRUE;
+    phdata->egl_initialized = SDL_FALSE;
 
     /* Setup amount of available displays */
     device->num_displays = 1;
@@ -130,16 +141,16 @@ N64_VideoInit(_THIS)
     SDL_DisplayMode current_mode;
 
     SDL_zero(current_mode);
+    SDL_zero(display);
 
     current_mode.w = 320;
     current_mode.h = 240;
-
     current_mode.refresh_rate = 60;
+
     /* 16 bpp for default */
     current_mode.format = SDL_PIXELFORMAT_RGBA5551;
     current_mode.driverdata = NULL;
 
-    SDL_zero(display);
     display.desktop_mode = current_mode;
     display.current_mode = current_mode;
     display.driverdata = NULL;
@@ -160,7 +171,6 @@ N64_VideoInit(_THIS)
 void
 N64_VideoQuit(_THIS)
 {
-    rdp_close();
     display_close();
 }
 
@@ -172,16 +182,21 @@ N64_GetDisplayModes(_THIS, SDL_VideoDisplay * display)
 int
 N64_SetDisplayMode(_THIS, SDL_VideoDisplay * display, SDL_DisplayMode * mode)
 {
+    display_close();
+
+    resolution_t ld_resolution = mode->h > 240 ? RESOLUTION_640x480 : RESOLUTION_320x240;
+    int pixelformat = PixelFormatToN64FMT(mode->format);
+
+    display_init(ld_resolution, pixelformat, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
+
     return 0;
 }
 
 int
 N64_CreateWindow(_THIS, SDL_Window * window)
 {
-    SDL_WindowData *wdata;
-
     /* Allocate window internal data */
-    wdata = (SDL_WindowData *) SDL_calloc(1, sizeof(SDL_WindowData));
+    SDL_WindowData *wdata = (SDL_WindowData *) SDL_calloc(1, sizeof(SDL_WindowData));
     if (wdata == NULL) {
         return SDL_OutOfMemory();
     }
@@ -190,6 +205,28 @@ N64_CreateWindow(_THIS, SDL_Window * window)
     window->driverdata = wdata;
 
     SDL_SetKeyboardFocus(window);
+
+    /* Init libdragon display */
+    int pixelformat = N64_BPP;
+
+    SDL_DisplayMode mode;
+    SDL_GetWindowDisplayMode(window, &mode);
+
+    resolution_t ld_resolution;
+    int w = window->w;
+    int h = window->h;
+	if (w > 512) {
+		ld_resolution = h > 240 ? RESOLUTION_640x480 : RESOLUTION_640x240;
+	} else if (w > 320) {
+		ld_resolution = h > 240 ? RESOLUTION_512x480 : RESOLUTION_512x240;
+	} else {
+		ld_resolution = w > 256 ? RESOLUTION_320x240 : RESOLUTION_256x240;
+	}
+
+    display_init(ld_resolution, pixelformat, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
+
+    fprintf(stderr, "window: %dx%d\n", window->w, window->h);
+    fprintf(stderr, "pixelformat: %ubpp; resolution: %ldx%ld\n", pixelformat == DEPTH_16_BPP ? 16 : 32, ld_resolution.width, ld_resolution.height);
 
     /* Window has been successfully created */
     return 0;

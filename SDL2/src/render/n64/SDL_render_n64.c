@@ -970,7 +970,6 @@ N64_CreateRenderer(SDL_Window *window, Uint32 flags)
 {
     SDL_Renderer *renderer;
     N64_RenderData *data;
-    int pixelformat;
 
     renderer = (SDL_Renderer *) SDL_calloc(1, sizeof(*renderer));
     if (!renderer) {
@@ -1010,26 +1009,6 @@ N64_CreateRenderer(SDL_Window *window, Uint32 flags)
     renderer->info.flags = (SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC);
     renderer->driverdata = data;
     renderer->window = window;
-
-    pixelformat = PixelFormatToN64FMT(SDL_GetWindowPixelFormat(window));
-
-    SDL_DisplayMode mode;
-    SDL_GetWindowDisplayMode(window, &mode);
-
-    // only support 320x240, on the first print below, garbage may come on 'mode.w' and it sets the res to 640 by mistake
-    resolution_t ld_resolution = mode.h > 240 ? RESOLUTION_640x480 : RESOLUTION_320x240;
-    // int w = mode.w;
-    // int h = mode.h;
-	// if (w > 512) {
-	// 	ld_resolution = h > 240 ? RESOLUTION_640x480 : RESOLUTION_640x240;
-	// } else if (w > 320) {
-	// 	ld_resolution = h > 240 ? RESOLUTION_512x480 : RESOLUTION_512x240;
-	// } else {
-	// 	ld_resolution = w > 256 ? RESOLUTION_320x240 : RESOLUTION_256x240;
-	// }
-
-    display_init(ld_resolution, pixelformat, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE);
-	// rdp_init();
 
     return renderer;
 }
