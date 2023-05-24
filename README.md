@@ -68,6 +68,12 @@ Add `$(C_SDL_FILES)` to your C source files for compilation, and set `SDL2_ROOT_
 
 You may also need to relocate the DFS file inside your ROM due to the amount of code that is inside SDL2. So use `N64_DFS_OFFSET` to set it accordingly.
 
+If you want to use 32bpp, you have to set `SDL2_BPP` to `DEPTH_32_BPP` on your Makefile like below:
+```
+SDL2_BPP = DEPTH_32_BPP
+```
+You will have to rebuild SDL2 for it to take effect.
+
 You can find Makefiles using SDL2 [here](https://github.com/stefanmielke/opentyrian/blob/master/Makefile) and [here](https://github.com/stefanmielke/nKaruga_n64/blob/master/Makefile.n64).
 
 ### SDL2_Image
