@@ -701,11 +701,9 @@ static void
 StartDrawing(SDL_Renderer *renderer)
 {
     // fprintf(stderr, "StartDrawing\n");
-    N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
     
-    data->displayContext = 0;
-    while (!(data->displayContext = display_lock()))
-        ;
+    surface_t *disp = display_get();
+    rdpq_attach_clear(disp, NULL);
 }
 
  void
@@ -761,7 +759,7 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
             }
 
             case SDL_RENDERCMD_CLEAR: {
-                // fprintf(stderr, "\tSDL_RENDERCMD_CLEAR\n");
+                fprintf(stderr, "\tSDL_RENDERCMD_CLEAR\n");
                 const Uint8 r = cmd->data.color.r;
                 const Uint8 g = cmd->data.color.g;
                 const Uint8 b = cmd->data.color.b;
@@ -769,8 +767,10 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
 
                 // fprintf(stderr, "       %u, %u, %u, %u\n", r, g, b, a);
 
-                uint32_t color = graphics_make_color(r, g, b, a);
-                graphics_fill_screen(data->displayContext, color);
+                // uint32_t color = graphics_make_color(r, g, b, a);
+                // graphics_fill_screen(data->displayContext, color);
+                color_t color = {r, g, b, a};
+                rdpq_clear(color);
                 // { fprintf(stderr, "     SDL_RENDERCMD_CLEAR: %u\n", get_ticks_ms() - start); start = get_ticks_ms(); }
                 break;
             }
@@ -821,7 +821,7 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
             }
 
             case SDL_RENDERCMD_COPY: {
-                // fprintf(stderr, "\tSDL_RENDERCMD_COPY\n");
+                fprintf(stderr, "\tSDL_RENDERCMD_COPY\n");
                 // const size_t count = cmd->data.draw.count;
                 // const VertTV *verts = (VertTV *)(cmd->data.draw.first);
                 // const Uint8 a = cmd->data.draw.a;
@@ -833,7 +833,8 @@ N64_RunCommandQueue(SDL_Renderer * renderer, SDL_RenderCommand *cmd, void *verti
                 // verts++;
                 // fprintf(stderr, "       u:%.2f,v:%.2f,x:%.2f,y:%.2f\n", verts->u, verts->v, verts->x, verts->y);
                 N64_TextureData *n64_texture = cmd->data.draw.texture->driverdata;
-                graphics_draw_sprite(data->displayContext, viewport.x, viewport.y, n64_texture->sprite);
+                rdpq_sprite_blit(n64_texture->sprite, viewport.x, viewport.y, NULL);
+                // graphics_draw_sprite(data->displayContext, viewport.x, viewport.y, n64_texture->sprite);
                 // { fprintf(stderr, "     SDL_RENDERCMD_COPY end: %u\n", get_ticks_ms() - start); start = get_ticks_ms(); }
                 break;
             }
@@ -922,11 +923,11 @@ static void
 N64_RenderPresent(SDL_Renderer * renderer)
 {
     // fprintf(stderr, "N64_RenderPresent\n");
-    N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
+    // N64_RenderData *data = (N64_RenderData *)renderer->driverdata;
 
     // print_memory(data->displayContext);
 
-    display_show(data->displayContext);
+    rdpq_detach_show();
 }
 
 static void
@@ -1009,6 +1010,9 @@ N64_CreateRenderer(SDL_Window *window, Uint32 flags)
     renderer->info.flags = (SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC);
     renderer->driverdata = data;
     renderer->window = window;
+
+    rdpq_init();
+    rdpq_debug_start();
 
     return renderer;
 }
