@@ -28,6 +28,9 @@
 #include "SDL_yuv_c.h"
 #include "../render/SDL_sysrender.h"
 
+#ifdef N64
+#include <n64sys.h>
+#endif
 
 /* Check to make sure we can safely check multiplication of surface w and pitch and it won't overflow size_t */
 SDL_COMPILE_TIME_ASSERT(surface_size_assumptions,
@@ -121,7 +124,11 @@ SDL_CreateRGBSurfaceWithFormat(Uint32 flags, int width, int height, int depth,
             return NULL;
         }
 
+#ifdef N64
+        surface->pixels = malloc_uncached((size_t)size);
+#else
         surface->pixels = SDL_SIMDAlloc((size_t)size);
+#endif
         if (!surface->pixels) {
             SDL_FreeSurface(surface);
             SDL_OutOfMemory();
@@ -1545,8 +1552,12 @@ SDL_FreeSurface(SDL_Surface * surface)
         /* Free aligned */
         SDL_SIMDFree(surface->pixels);
     } else {
+#ifdef N64
+        free_uncached(surface->pixels);
+#else
         /* Normal */
         SDL_free(surface->pixels);
+#endif
     }
     if (surface->map) {
         SDL_FreeBlitMap(surface->map);
