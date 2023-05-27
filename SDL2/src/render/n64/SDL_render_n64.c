@@ -1012,7 +1012,6 @@ N64_CreateRenderer(SDL_Window *window, Uint32 flags)
     renderer->window = window;
 
     rdpq_init();
-    rdpq_debug_start();
 
     return renderer;
 }

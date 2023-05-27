@@ -209,9 +209,6 @@ N64_CreateWindow(_THIS, SDL_Window * window)
     /* Init libdragon display */
     int pixelformat = N64_BPP;
 
-    SDL_DisplayMode mode;
-    SDL_GetWindowDisplayMode(window, &mode);
-
     resolution_t ld_resolution;
     int w = window->w;
     int h = window->h;
